@@ -212,4 +212,100 @@ func TestSetDefaults(t *testing.T) {
 	if cfg.Audit.MaxSQLLength != 2000 {
 		t.Errorf("Audit.MaxSQLLength default = %d, want 2000", cfg.Audit.MaxSQLLength)
 	}
+	if cfg.Audit.MaxSizeMB != 100 {
+		t.Errorf("Audit.MaxSizeMB default = %d, want 100", cfg.Audit.MaxSizeMB)
+	}
+	if cfg.Audit.MaxBackups != 10 {
+		t.Errorf("Audit.MaxBackups default = %d, want 10", cfg.Audit.MaxBackups)
+	}
+	if cfg.Audit.MaxAgeDays != 30 {
+		t.Errorf("Audit.MaxAgeDays default = %d, want 30", cfg.Audit.MaxAgeDays)
+	}
+}
+
+func TestLoad_FileNotFound(t *testing.T) {
+	_, err := Load("/nonexistent/path/config.yaml")
+	if err == nil {
+		t.Error("Load() should fail for non-existent file")
+	}
+}
+
+func TestLoadSecurity_FileNotFound(t *testing.T) {
+	_, err := LoadSecurity("/nonexistent/path/security.yaml")
+	if err == nil {
+		t.Error("LoadSecurity() should fail for non-existent file")
+	}
+}
+
+func TestLoad_InvalidYAML(t *testing.T) {
+	content := `
+invalid yaml content:
+  [broken
+`
+	tmpFile, err := os.CreateTemp("", "config*.yaml")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+	defer os.Remove(tmpFile.Name())
+
+	if _, err := tmpFile.Write([]byte(content)); err != nil {
+		t.Fatalf("Failed to write temp file: %v", err)
+	}
+
+	_, err = Load(tmpFile.Name())
+	if err == nil {
+		t.Error("Load() should fail for invalid YAML")
+	}
+}
+
+func TestLoadSecurity_InvalidYAML(t *testing.T) {
+	content := `
+invalid yaml:
+  [broken
+`
+	tmpFile, err := os.CreateTemp("", "security*.yaml")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+	defer os.Remove(tmpFile.Name())
+
+	if _, err := tmpFile.Write([]byte(content)); err != nil {
+		t.Fatalf("Failed to write temp file: %v", err)
+	}
+
+	_, err = LoadSecurity(tmpFile.Name())
+	if err == nil {
+		t.Error("LoadSecurity() should fail for invalid YAML")
+	}
+}
+
+func TestSecurityRules_EmptyLists(t *testing.T) {
+	rules := &SecurityRules{
+		AllowedDML: []string{},
+		AllowedDDL: []string{},
+		Blocked:    []string{},
+	}
+
+	if rules.IsDMLAllowed("SELECT") {
+		t.Error("SELECT should not be allowed with empty list")
+	}
+	if rules.IsDDLAllowed("CREATE_TABLE") {
+		t.Error("CREATE_TABLE should not be allowed with empty list")
+	}
+	if rules.IsBlocked("DROP") {
+		t.Error("DROP should not be blocked with empty list")
+	}
+}
+
+func TestSecurityRules_AllowedDDLCaseInsensitive(t *testing.T) {
+	rules := &SecurityRules{
+		AllowedDDL: []string{"create_table", "ALTER_TABLE"},
+	}
+
+	if !rules.IsDDLAllowed("CREATE_TABLE") {
+		t.Error("CREATE_TABLE should be allowed (case insensitive)")
+	}
+	if !rules.IsDDLAllowed("alter_table") {
+		t.Error("alter_table should be allowed (case insensitive)")
+	}
 }
