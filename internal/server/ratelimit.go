@@ -116,6 +116,10 @@ func (s *Server) rateLimitMiddleware(limiter *IPRateLimiter, next http.Handler) 
 		ip := getRealIP(r)
 		if !limiter.GetLimiter(ip).Allow() {
 			log.Printf("Rate limit exceeded for IP: %s", ip)
+			// Record rate limit exceeded metric
+			if s.metrics != nil {
+				s.metrics.RecordRateLimitExceeded(ip)
+			}
 			http.Error(w, "rate limit exceeded", http.StatusTooManyRequests)
 			return
 		}

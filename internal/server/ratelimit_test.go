@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fan/safe-mysql-mcp/internal/metrics"
 	"golang.org/x/time/rate"
 )
 
@@ -244,5 +245,59 @@ func TestIsValidIP(t *testing.T) {
 				t.Errorf("isValidIP(%q) = %v, want %v", tt.ip, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestMetricsMiddleware(t *testing.T) {
+	// Initialize metrics
+	m := metrics.Init("test")
+
+	// Create a test server with metrics middleware
+	s := &Server{metrics: m}
+
+	// Create a simple handler that returns 200
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	})
+
+	// Wrap with metrics middleware
+	wrapped := s.metricsMiddleware("/test", handler)
+
+	// Make a request
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	rec := httptest.NewRecorder()
+	wrapped.ServeHTTP(rec, req)
+
+	// Verify response
+	if rec.Code != http.StatusOK {
+		t.Errorf("Status = %d, want %d", rec.Code, http.StatusOK)
+	}
+
+	// Verify metrics were recorded
+	metricsHandler := m.Handler()
+	req = httptest.NewRequest(http.MethodGet, "/metrics", nil)
+	rec = httptest.NewRecorder()
+	metricsHandler.ServeHTTP(rec, req)
+
+	body := rec.Body.String()
+	if body == "" {
+		t.Error("Expected metrics output")
+	}
+}
+
+func TestResponseWriter(t *testing.T) {
+	rec := httptest.NewRecorder()
+	wrapped := &responseWriter{ResponseWriter: rec, status: http.StatusOK}
+
+	// Test default status
+	if wrapped.status != http.StatusOK {
+		t.Errorf("Default status = %d, want %d", wrapped.status, http.StatusOK)
+	}
+
+	// Test WriteHeader
+	wrapped.WriteHeader(http.StatusNotFound)
+	if wrapped.status != http.StatusNotFound {
+		t.Errorf("Status after WriteHeader = %d, want %d", wrapped.status, http.StatusNotFound)
 	}
 }

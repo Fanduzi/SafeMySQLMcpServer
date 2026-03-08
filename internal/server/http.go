@@ -13,6 +13,7 @@ import (
 	"github.com/fan/safe-mysql-mcp/internal/config"
 	"github.com/fan/safe-mysql-mcp/internal/database"
 	"github.com/fan/safe-mysql-mcp/internal/mcp"
+	"github.com/fan/safe-mysql-mcp/internal/metrics"
 	"github.com/fan/safe-mysql-mcp/internal/security"
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -27,6 +28,7 @@ type Server struct {
 	httpSrv     *http.Server
 	mcpServer   *mcpsdk.Server
 	rateLimiter *IPRateLimiter
+	metrics     *metrics.Metrics
 }
 
 // New creates a new server
@@ -70,6 +72,9 @@ func New(cfg *config.ReloadableConfig) (*Server, error) {
 	// Create rate limiter
 	rateLimiter := NewIPRateLimiter(DefaultRateLimiterConfig())
 
+	// Initialize metrics
+	m := metrics.Init("safemysql")
+
 	return &Server{
 		cfg:         cfg,
 		validator:   validator,
@@ -78,6 +83,7 @@ func New(cfg *config.ReloadableConfig) (*Server, error) {
 		pool:        pool,
 		mcpServer:   mcpServer,
 		rateLimiter: rateLimiter,
+		metrics:     m,
 	}, nil
 }
 
@@ -99,12 +105,17 @@ func (s *Server) Start() error {
 	// Register MCP endpoint with rate limiting and auth middleware
 	authHandler := s.authMiddleware(mcpHandler)
 	rateLimitedMCP := s.rateLimitMiddleware(s.rateLimiter, authHandler)
-	mux.Handle("/mcp", rateLimitedMCP)
+	metricsMCP := s.metricsMiddleware("/mcp", rateLimitedMCP)
+	mux.Handle("/mcp", metricsMCP)
 
 	// Health check endpoint with rate limiting (no auth required)
 	healthHandler := http.HandlerFunc(s.handleHealth)
 	rateLimitedHealth := s.rateLimitMiddleware(s.rateLimiter, healthHandler)
-	mux.Handle("/health", rateLimitedHealth)
+	metricsHealth := s.metricsMiddleware("/health", rateLimitedHealth)
+	mux.Handle("/health", metricsHealth)
+
+	// Metrics endpoint (no auth required, for Prometheus scraping)
+	mux.Handle("/metrics", s.metrics.Handler())
 
 	// Create HTTP server
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
@@ -126,6 +137,38 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("OK"))
 }
 
+// metricsMiddleware records HTTP request metrics
+func (s *Server) metricsMiddleware(path string, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+
+		// Track active requests
+		s.metrics.RequestsActive.Inc()
+		defer s.metrics.RequestsActive.Dec()
+
+		// Wrap response writer to capture status code
+		wrapped := &responseWriter{ResponseWriter: w, status: http.StatusOK}
+
+		next.ServeHTTP(wrapped, r)
+
+		// Record metrics
+		duration := time.Since(start)
+		s.metrics.RequestsTotal.WithLabelValues(r.Method, path, fmt.Sprintf("%d", wrapped.status)).Inc()
+		s.metrics.RequestDuration.WithLabelValues(r.Method, path).Observe(duration.Seconds())
+	})
+}
+
+// responseWriter wraps http.ResponseWriter to capture status code
+type responseWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+func (w *responseWriter) WriteHeader(status int) {
+	w.status = status
+	w.ResponseWriter.WriteHeader(status)
+}
+
 // authMiddleware validates JWT tokens and adds user info to context
 func (s *Server) authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -134,6 +177,7 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 		token := auth.ExtractToken(authHeader)
 
 		if token == "" {
+			s.metrics.RecordAuthAttempt("jwt", false)
 			http.Error(w, "missing authorization token", http.StatusUnauthorized)
 			return
 		}
@@ -141,9 +185,13 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 		// Validate token
 		claims, err := s.validator.Validate(token)
 		if err != nil {
+			s.metrics.RecordAuthAttempt("jwt", false)
 			http.Error(w, fmt.Sprintf("invalid token: %v", err), http.StatusUnauthorized)
 			return
 		}
+
+		// Record successful auth
+		s.metrics.RecordAuthAttempt("jwt", true)
 
 		// Add user info to context
 		ctx := auth.ContextWithUser(r.Context(), claims.UserID, claims.UserEmail)
@@ -159,6 +207,10 @@ func (s *Server) Shutdown(ctx context.Context) error {
 		if err := s.httpSrv.Shutdown(ctx); err != nil {
 			errs = append(errs, err)
 		}
+	}
+
+	if s.rateLimiter != nil {
+		s.rateLimiter.Close()
 	}
 
 	if s.pool != nil {
