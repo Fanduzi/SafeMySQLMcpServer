@@ -1,0 +1,363 @@
+openapi: 3.1.0
+info:
+  title: SafeMySQL MCP Server API
+  description: |
+    A secure MySQL MCP (Model Context Protocol) server that provides safe database access
+    with SQL injection prevention, query validation, and comprehensive audit logging.
+
+    ## Authentication
+    All MCP endpoints require JWT authentication. Include the token in the Authorization header:
+    ```
+    Authorization: Bearer <your-jwt-token>
+    ```
+
+    ## Rate Limiting
+    API requests are rate-limited per IP address. Default limits are 10 requests/second
+    with a burst of 20 requests.
+
+    ## Security Features
+    - SQL injection prevention via identifier validation
+    - Query type restrictions (DML/DDL allowlists)
+    - Automatic LIMIT clause enforcement
+    - Query timeout enforcement
+    - Comprehensive audit logging
+  version: 1.0.0
+  contact:
+    name: API Support
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+tags:
+  - name: MCP
+    description: Model Context Protocol endpoints
+  - name: Health
+    description: Health check endpoints
+  - name: Metrics
+    description: Prometheus metrics endpoint
+
+paths:
+  /mcp:
+    post:
+      tags:
+        - MCP
+      summary: MCP JSON-RPC endpoint
+      description: |
+        Main MCP endpoint implementing JSON-RPC 2.0 protocol.
+
+        ## Available Methods
+
+        ### tools/list
+        Lists all available tools.
+        ```json
+        {"jsonrpc": "2.0", "id": 1, "method": "tools/list"}
+        ```
+
+        ### tools/call
+        Executes a tool with the specified arguments.
+        ```json
+        {
+          "jsonrpc": "2.0",
+          "id": 2,
+          "method": "tools/call",
+          "params": {
+            "name": "query",
+            "arguments": {
+              "database": "mydb",
+              "sql": "SELECT * FROM users LIMIT 10"
+            }
+          }
+        }
+        ```
+
+        ## Available Tools
+
+        ### query
+        Execute a SQL query on a database.
+        - **database**: Target database name
+        - **sql**: SQL statement to execute
+
+        ### list_databases
+        List all available databases.
+
+        ### list_tables
+        List all tables in a database.
+        - **database**: Target database name
+
+        ### describe_table
+        Show table structure.
+        - **database**: Target database name
+        - **table**: Table name
+
+        ### show_create_table
+        Show CREATE TABLE statement.
+        - **database**: Target database name
+        - **table**: Table name
+
+        ### explain
+        Show query execution plan.
+        - **database**: Target database name
+        - **sql**: SQL statement to explain
+
+        ### search_tables
+        Search for tables matching a pattern.
+        - **table_pattern**: Pattern to search for
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JSONRPCRequest'
+            examples:
+              list_tools:
+                summary: List available tools
+                value:
+                  jsonrpc: "2.0"
+                  id: 1
+                  method: tools/list
+              call_query:
+                summary: Execute a query
+                value:
+                  jsonrpc: "2.0"
+                  id: 2
+                  method: tools/call
+                  params:
+                    name: query
+                    arguments:
+                      database: mydb
+                      sql: SELECT * FROM users LIMIT 10
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JSONRPCResponse'
+              examples:
+                tools_list:
+                  summary: Tools list response
+                  value:
+                    jsonrpc: "2.0"
+                    id: 1
+                    result:
+                      tools:
+                        - name: query
+                          description: Execute a SQL query
+                          inputSchema:
+                            type: object
+                            properties:
+                              database:
+                                type: string
+                              sql:
+                                type: string
+                            required: [database, sql]
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JSONRPCError'
+        '401':
+          description: Authentication required
+        '429':
+          description: Rate limit exceeded
+
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Returns server health status. Used by load balancers and Kubernetes probes.
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: OK
+
+  /metrics:
+    get:
+      tags:
+        - Metrics
+      summary: Prometheus metrics
+      description: |
+        Returns Prometheus-compatible metrics for monitoring.
+
+        ## Available Metrics
+
+        ### HTTP Metrics
+        - `safemysql_http_requests_total` - Total HTTP requests
+        - `safemysql_http_request_duration_seconds` - Request duration histogram
+        - `safemysql_http_requests_active` - Active requests gauge
+
+        ### Database Metrics
+        - `safemysql_db_queries_total` - Total database queries
+        - `safemysql_db_query_duration_seconds` - Query duration histogram
+        - `safemysql_db_query_rows` - Rows returned histogram
+        - `safemysql_db_connections_active` - Active connections
+        - `safemysql_db_connections_idle` - Idle connections
+
+        ### Security Metrics
+        - `safemysql_security_violations_total` - Security violations
+        - `safemysql_security_blocked_queries_total` - Blocked queries
+        - `safemysql_security_sql_injection_attempts_total` - SQL injection attempts
+
+        ### Auth Metrics
+        - `safemysql_auth_attempts_total` - Authentication attempts
+        - `safemysql_auth_failures_total` - Authentication failures
+
+        ### Rate Limit Metrics
+        - `safemysql_rate_limit_exceeded_total` - Rate limit exceeded events
+
+        ### MCP Metrics
+        - `safemysql_mcp_calls_total` - MCP tool calls
+        - `safemysql_mcp_call_duration_seconds` - MCP call duration
+        - `safemysql_mcp_errors_total` - MCP errors
+      responses:
+        '200':
+          description: Prometheus metrics output
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: |
+                  # HELP safemysql_http_requests_total Total number of HTTP requests
+                  # TYPE safemysql_http_requests_total counter
+                  safemysql_http_requests_total{method="POST",path="/mcp",status="200"} 42
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT authentication token. Obtain a token using the token generator tool:
+        ```bash
+        ./token -user <user_id> -email <email> -secret <jwt_secret>
+        ```
+
+  schemas:
+    JSONRPCRequest:
+      type: object
+      required:
+        - jsonrpc
+        - id
+        - method
+      properties:
+        jsonrpc:
+          type: string
+          enum: ["2.0"]
+          description: JSON-RPC version
+        id:
+          oneOf:
+            - type: string
+            - type: integer
+          description: Request identifier
+        method:
+          type: string
+          description: Method name
+        params:
+          type: object
+          description: Method parameters
+          properties:
+            name:
+              type: string
+              description: Tool name (for tools/call)
+            arguments:
+              type: object
+              description: Tool arguments (for tools/call)
+
+    JSONRPCResponse:
+      type: object
+      required:
+        - jsonrpc
+        - id
+      properties:
+        jsonrpc:
+          type: string
+          enum: ["2.0"]
+        id:
+          oneOf:
+            - type: string
+            - type: integer
+        result:
+          type: object
+          description: Successful result
+        error:
+          $ref: '#/components/schemas/JSONRPCErrorObject'
+
+    JSONRPCError:
+      type: object
+      required:
+        - jsonrpc
+        - id
+        - error
+      properties:
+        jsonrpc:
+          type: string
+          enum: ["2.0"]
+        id:
+          oneOf:
+            - type: string
+            - type: integer
+            - type: "null"
+        error:
+          $ref: '#/components/schemas/JSONRPCErrorObject'
+
+    JSONRPCErrorObject:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          description: Error code
+        message:
+          type: string
+          description: Error message
+        data:
+          type: object
+          description: Additional error data
+
+    QueryResult:
+      type: object
+      properties:
+        columns:
+          type: array
+          items:
+            type: string
+          description: Column names
+        rows:
+          type: array
+          items:
+            type: array
+          description: Row data
+        rows_affected:
+          type: integer
+          description: Number of rows affected (for DML)
+        last_insert_id:
+          type: integer
+          description: Last insert ID (for INSERT)
+
+    SecurityError:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error type
+        message:
+          type: string
+          description: Detailed error message
+        blocked_operation:
+          type: string
+          description: The blocked operation

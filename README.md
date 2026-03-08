@@ -13,16 +13,34 @@ A secure MySQL MCP (Model Context Protocol) Server that allows AI tools like Cla
   - Query timeout and row limits
 - **Audit Logging**: Complete audit trail with JSON format and log rotation
 - **Hot Configuration Reload**: Update settings without restart
+- **Prometheus Metrics**: Comprehensive observability support
+- **Docker Support**: Production-ready containerization
+- **CI/CD**: GitHub Actions pipeline with automated testing and security scans
 
 ## Quick Start
 
-### 1. Build
+### Using Docker (Recommended)
+
+```bash
+# Start with docker-compose (includes MySQL)
+docker-compose up -d
+
+# Generate a token
+docker exec safemysql-app /app/token -user admin -email admin@example.com -secret your-jwt-secret
+
+# Check health
+curl http://localhost:8080/health
+```
+
+### Manual Setup
+
+#### 1. Build
 
 ```bash
 make build
 ```
 
-### 2. Configure
+#### 2. Configure
 
 Copy and edit configuration files:
 
@@ -34,22 +52,30 @@ cp config/security.yaml.example config/security.yaml
 Set environment variables:
 
 ```bash
-export JWT_SECRET=your-secret-key
+export JWT_SECRET=your-secret-key-min-32-characters
 export DEV_DB_USER=your-db-user
 export DEV_DB_PASSWORD=your-db-password
 ```
 
-### 3. Generate Token
+#### 3. Generate Token
 
 ```bash
 ./bin/mysql-mcp-token --user zhangsan --email zhangsan@company.com --expire 365d
 ```
 
-### 4. Run Server
+#### 4. Run Server
 
 ```bash
 ./bin/safe-mysql-mcp -config config/config.yaml
 ```
+
+## API Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `POST /mcp` | MCP JSON-RPC endpoint (requires auth) |
+| `GET /health` | Health check endpoint |
+| `GET /metrics` | Prometheus metrics endpoint |
 
 ## MCP Tools
 
@@ -145,24 +171,90 @@ Configuration changes are automatically applied:
 - Security rules
 - Audit settings
 
+## Prometheus Metrics
+
+Access metrics at `/metrics` endpoint. Available metrics:
+
+### HTTP Metrics
+- `safemysql_http_requests_total` - Total HTTP requests
+- `safemysql_http_request_duration_seconds` - Request duration histogram
+- `safemysql_http_requests_active` - Active requests gauge
+
+### Database Metrics
+- `safemysql_db_queries_total` - Total database queries
+- `safemysql_db_query_duration_seconds` - Query duration histogram
+- `safemysql_db_query_rows` - Rows returned histogram
+- `safemysql_db_connections_active` - Active connections
+- `safemysql_db_connections_idle` - Idle connections
+
+### Security Metrics
+- `safemysql_security_violations_total` - Security violations
+- `safemysql_security_blocked_queries_total` - Blocked queries
+- `safemysql_security_sql_injection_attempts_total` - SQL injection attempts
+
+### Rate Limit & Auth
+- `safemysql_rate_limit_exceeded_total` - Rate limit exceeded
+- `safemysql_auth_attempts_total` - Authentication attempts
+- `safemysql_auth_failures_total` - Authentication failures
+
+### MCP Metrics
+- `safemysql_mcp_calls_total` - MCP tool calls
+- `safemysql_mcp_call_duration_seconds` - MCP call duration
+- `safemysql_mcp_errors_total` - MCP errors
+
 ## Development
 
 ### Prerequisites
 
-- Go 1.21+
-- MySQL 5.7+
+- Go 1.22+
+- MySQL 5.7+ (or use Docker)
+- Docker (optional, for containerized development)
 
 ### Run Tests
 
 ```bash
+# Run all tests with coverage
 make test
+
+# Run with race detection
+go test ./... -race -cover
+
+# Run specific package tests
+go test ./internal/security/... -v
 ```
 
 ### Lint
 
 ```bash
 make lint
+# or
+golangci-lint run
 ```
+
+### Docker Development
+
+```bash
+# Build and run with MySQL
+docker-compose up -d
+
+# View logs
+docker-compose logs -f app
+
+# Stop services
+docker-compose down
+```
+
+### CI/CD
+
+The project includes GitHub Actions workflows for:
+
+- **Build & Test**: Runs on Go 1.22, 1.23, 1.24
+- **Lint**: golangci-lint with 25+ linters
+- **Security Scan**: Gosec vulnerability scanner
+
+## API Documentation
+
+See [docs/openapi.yaml](docs/openapi.yaml) for the complete OpenAPI specification.
 
 ## License
 
