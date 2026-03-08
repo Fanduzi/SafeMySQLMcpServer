@@ -1,0 +1,39 @@
+# Binaries
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Test coverage
+*.out
+coverage.txt
+
+# Dependency directories
+vendor/
+
+# Build artifacts
+*.test
+*.prof
+
+# Config files with secrets
+config/local.yaml
+config/*.local.yaml
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/

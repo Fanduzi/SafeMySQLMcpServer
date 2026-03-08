@@ -1,0 +1,35 @@
+security:
+  # Allowed DML operations
+  allowed_dml:
+    - SELECT
+    - INSERT
+    - UPDATE
+    - DELETE
+
+  # Allowed DDL operations (fine-grained)
+  allowed_ddl:
+    - CREATE_TABLE
+    - CREATE_INDEX
+    - ALTER_TABLE
+
+  # Blocked operations
+  blocked:
+    - DROP
+    - TRUNCATE
+    - RENAME
+    - CREATE_USER
+    - CREATE_DATABASE
+    - CREATE_VIEW
+    - CREATE_FUNCTION
+    - CREATE_PROCEDURE
+    - GRANT
+    - REVOKE
+    - SET_GLOBAL
+
+  # DML safety enhancements
+  auto_limit: 1000        # Auto add LIMIT for DML without WHERE
+  max_limit: 10000        # Maximum user-specified LIMIT
+
+  # Execution limits
+  query_timeout: 30s      # Single query timeout
+  max_rows: 10000         # Maximum returned rows
