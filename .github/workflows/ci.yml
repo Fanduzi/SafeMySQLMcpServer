@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: Build and Test
+    name: Build and Unit Test
     runs-on: ubuntu-latest
 
     strategy:
@@ -36,8 +36,8 @@ jobs:
       - name: Run go vet
         run: go vet ./...
 
-      - name: Run tests
-        run: go test ./... -race -coverprofile=coverage.out -covermode=atomic
+      - name: Run unit tests
+        run: go test ./... -race -coverprofile=coverage.out -covermode=atomic -short
 
       - name: Upload coverage
         if: matrix.go-version == '1.24'
@@ -45,6 +45,71 @@ jobs:
         with:
           name: coverage
           path: coverage.out
+
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: testpassword
+          MYSQL_DATABASE: testdb
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -ptestpassword"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Wait for MySQL
+        run: |
+          for i in {1..30}; do
+            if mysqladmin ping -h 127.0.0.1 -ptestpassword --silent 2>/dev/null; then
+              echo "MySQL is ready"
+              break
+            fi
+            echo "Waiting for MySQL... ($i/30)"
+            sleep 2
+          done
+
+      - name: Run integration tests
+        env:
+          MYSQL_HOST: 127.0.0.1
+          MYSQL_PORT: 3306
+          MYSQL_USER: root
+          MYSQL_PASSWORD: testpassword
+          MYSQL_DATABASE: testdb
+        run: go test ./... -race -v -run Integration
+
+      - name: Run all tests with MySQL
+        env:
+          MYSQL_HOST: 127.0.0.1
+          MYSQL_PORT: 3306
+          MYSQL_USER: root
+          MYSQL_PASSWORD: testpassword
+          MYSQL_DATABASE: testdb
+        run: go test ./... -race -coverprofile=integration-coverage.out
+
+      - name: Upload integration coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-coverage
+          path: integration-coverage.out
 
   lint:
     name: Lint
