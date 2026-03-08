@@ -1,0 +1,40 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Test files
+*_test.go
+testdata/
+
+# CI/CD
+.github/
+.golangci.yml
+
+# Development files
+docker-compose.yml
+Makefile
+
+# Binary output
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Temporary files
+*.log
+*.tmp
+tmp/
+temp/
