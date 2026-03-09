@@ -6,10 +6,328 @@
 package mcp
 
 import (
+	"context"
 	"testing"
 
+	"github.com/fan/safe-mysql-mcp/internal/audit"
+	"github.com/fan/safe-mysql-mcp/internal/config"
+	"github.com/fan/safe-mysql-mcp/internal/security"
 	"github.com/fan/safe-mysql-mcp/internal/validation"
+	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 )
+
+// TestNewMCPServer tests MCP server creation
+func TestNewMCPServer(t *testing.T) {
+	server := NewMCPServer()
+	if server == nil {
+		t.Fatal("NewMCPServer returned nil")
+	}
+}
+
+// TestRegisterTools tests tool registration
+func TestRegisterTools(t *testing.T) {
+	server := NewMCPServer()
+	if server == nil {
+		t.Fatal("NewMCPServer returned nil")
+	}
+
+	// Create handler with nil dependencies (just for registration test)
+	// Note: parser is nil because it requires pingcap/parser driver import
+	h := &Handler{
+		router:   nil,
+		parser:   nil, // Parser requires driver import, nil is fine for registration
+		checker:  security.NewChecker(&config.SecurityRules{}),
+		rewriter: security.NewRewriter(&config.SecurityRules{}),
+		audit:    nil,
+		config:   nil,
+	}
+
+	// Should not panic
+	RegisterTools(server, h)
+}
+
+// TestHandlerWithDependencies tests handler creation with all dependencies
+func TestHandlerWithDependencies(t *testing.T) {
+	// Note: parser requires importing the pingcap/parser driver
+	// which is done via _ import in the security package
+	// For this test, we just verify handler creation with nil parser
+	checker := security.NewChecker(&config.SecurityRules{})
+	rewriter := security.NewRewriter(&config.SecurityRules{})
+	auditLogger, err := audit.NewLogger(&config.AuditConfig{Enabled: false})
+	if err != nil {
+		t.Fatalf("Failed to create audit logger: %v", err)
+	}
+
+	h := NewHandler(nil, nil, checker, rewriter, auditLogger, nil)
+
+	if h == nil {
+		t.Fatal("NewHandler returned nil")
+	}
+	// parser is nil in this test
+	if h.checker == nil {
+		t.Error("checker should not be nil")
+	}
+	if h.rewriter == nil {
+		t.Error("rewriter should not be nil")
+	}
+}
+
+// TestHandleQueryToolValidation tests query tool input validation
+func TestHandleQueryToolValidation(t *testing.T) {
+	h := &Handler{
+		parser:   security.NewParser(),
+		checker:  security.NewChecker(&config.SecurityRules{}),
+		rewriter: security.NewRewriter(&config.SecurityRules{}),
+	}
+
+	tests := []struct {
+		name    string
+		input   QueryInput
+		wantErr bool
+	}{
+		{"empty database", QueryInput{Database: "", SQL: "SELECT 1"}, true},
+		{"empty SQL", QueryInput{Database: "testdb", SQL: ""}, true},
+		{"invalid database", QueryInput{Database: "test-db", SQL: "SELECT 1"}, true},
+		{"valid input", QueryInput{Database: "testdb", SQL: "SELECT 1"}, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			req := &mcpsdk.CallToolRequest{}
+
+			result, _, err := h.handleQueryTool(ctx, req, tt.input)
+
+			if tt.wantErr {
+				if result == nil || !result.IsError {
+					t.Error("expected error result")
+				}
+			} else {
+				// Without database connection, will return error but not validation error
+				if result != nil && result.IsError {
+					// Check if it's a validation error vs database error
+					if len(result.Content) > 0 {
+						if text, ok := result.Content[0].(*mcpsdk.TextContent); ok {
+							if Contains(text.Text, "Validation error") {
+								t.Errorf("unexpected validation error: %s", text.Text)
+							}
+						}
+					}
+				}
+			}
+			_ = err
+		})
+	}
+}
+
+// TestHandleListDatabasesTool tests list databases tool
+func TestHandleListDatabasesTool(t *testing.T) {
+	h := &Handler{}
+
+	ctx := context.Background()
+	req := &mcpsdk.CallToolRequest{}
+
+	// Without router, will return error
+	result, _, _ := h.handleListDatabasesTool(ctx, req, struct{}{})
+	if result == nil {
+		t.Error("expected non-nil result")
+	}
+}
+
+// TestHandleListTablesToolValidation tests list tables tool validation
+func TestHandleListTablesToolValidation(t *testing.T) {
+	h := &Handler{}
+
+	tests := []struct {
+		name    string
+		input   ListTablesInput
+		wantErr bool
+	}{
+		{"empty database", ListTablesInput{Database: ""}, true},
+		{"invalid database", ListTablesInput{Database: "test-db"}, true},
+		{"valid database", ListTablesInput{Database: "testdb"}, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			req := &mcpsdk.CallToolRequest{}
+
+			result, _, _ := h.handleListTablesTool(ctx, req, tt.input)
+
+			if tt.wantErr {
+				if result == nil || !result.IsError {
+					t.Error("expected error result")
+				}
+			}
+		})
+	}
+}
+
+// TestHandleDescribeTableToolValidation tests describe table tool validation
+func TestHandleDescribeTableToolValidation(t *testing.T) {
+	h := &Handler{}
+
+	tests := []struct {
+		name    string
+		input   DescribeTableInput
+		wantErr bool
+	}{
+		{"empty database", DescribeTableInput{Database: "", Table: "users"}, true},
+		{"empty table", DescribeTableInput{Database: "mydb", Table: ""}, true},
+		{"invalid table", DescribeTableInput{Database: "mydb", Table: "user-table"}, true},
+		{"valid input", DescribeTableInput{Database: "mydb", Table: "users"}, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			req := &mcpsdk.CallToolRequest{}
+
+			result, _, _ := h.handleDescribeTableTool(ctx, req, tt.input)
+
+			if tt.wantErr {
+				if result == nil || !result.IsError {
+					t.Error("expected error result")
+				}
+			}
+		})
+	}
+}
+
+// TestHandleExplainToolValidation tests explain tool validation
+func TestHandleExplainToolValidation(t *testing.T) {
+	h := &Handler{}
+
+	tests := []struct {
+		name    string
+		input   ExplainInput
+		wantErr bool
+	}{
+		{"empty database", ExplainInput{Database: "", SQL: "SELECT 1"}, true},
+		{"empty SQL", ExplainInput{Database: "mydb", SQL: ""}, true},
+		{"invalid database", ExplainInput{Database: "my-db", SQL: "SELECT 1"}, true},
+		{"valid input", ExplainInput{Database: "mydb", SQL: "SELECT * FROM users"}, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			req := &mcpsdk.CallToolRequest{}
+
+			result, _, _ := h.handleExplainTool(ctx, req, tt.input)
+
+			if tt.wantErr {
+				if result == nil || !result.IsError {
+					t.Error("expected error result")
+				}
+			}
+		})
+	}
+}
+
+// TestHandleSearchTablesToolValidation tests search tables tool validation
+func TestHandleSearchTablesToolValidation(t *testing.T) {
+	h := &Handler{}
+
+	tests := []struct {
+		name    string
+		input   SearchTablesInput
+		wantErr bool
+	}{
+		{"empty pattern", SearchTablesInput{TablePattern: ""}, true},
+		{"valid pattern", SearchTablesInput{TablePattern: "user%"}, false},
+		{"pattern too long", SearchTablesInput{TablePattern: string(make([]byte, 300))}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			req := &mcpsdk.CallToolRequest{}
+
+			result, _, _ := h.handleSearchTablesTool(ctx, req, tt.input)
+
+			if tt.wantErr {
+				if result == nil || !result.IsError {
+					t.Error("expected error result")
+				}
+			}
+		})
+	}
+}
+
+// TestHandleShowCreateTableToolValidation tests show create table tool validation
+func TestHandleShowCreateTableToolValidation(t *testing.T) {
+	h := &Handler{}
+
+	tests := []struct {
+		name    string
+		input   ShowCreateTableInput
+		wantErr bool
+	}{
+		{"empty database", ShowCreateTableInput{Database: "", Table: "users"}, true},
+		{"empty table", ShowCreateTableInput{Database: "mydb", Table: ""}, true},
+		{"valid input", ShowCreateTableInput{Database: "mydb", Table: "users"}, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			req := &mcpsdk.CallToolRequest{}
+
+			result, _, _ := h.handleShowCreateTableTool(ctx, req, tt.input)
+
+			if tt.wantErr {
+				if result == nil || !result.IsError {
+					t.Error("expected error result")
+				}
+			}
+		})
+	}
+}
+
+// TestMarshalResult tests JSON marshaling of results
+func TestMarshalResult(t *testing.T) {
+	tests := []struct {
+		name  string
+		input interface{}
+	}{
+		{"query result", &QueryResult{Columns: []string{"id"}, Rows: [][]interface{}{{1}}}},
+		{"list databases result", &ListDatabasesResult{Databases: []string{"db1"}}},
+		{"list tables result", &ListTablesResult{Tables: []TableInfo{{Name: "users"}}}},
+		{"describe table result", &DescribeTableResult{Columns: []ColumnInfo{{Field: "id"}}}},
+		{"search tables result", &SearchTablesResult{Matches: []TableMatch{{Database: "db1", Table: "users"}}}},
+		{"explain result", &ExplainResult{Columns: []string{"id"}, Rows: [][]interface{}{{1}}}},
+		{"show create result", &ShowCreateTableResult{CreateStatement: "CREATE TABLE t1 (id INT)"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data := MarshalResult(tt.input)
+			if len(data) == 0 {
+				t.Error("MarshalResult() returned empty data")
+			}
+			if Contains(data, "error") && !Contains(data, "failed to marshal") {
+				// Only an error if it's a marshaling error
+				t.Errorf("MarshalResult() returned error: %s", data)
+			}
+		})
+	}
+}
+
+// Helper function
+func Contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > 0 && ContainsHelper(s, substr))
+}
+
+func ContainsHelper(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}
 
 // TestValidateQueryInput tests input validation for query tool
 func TestValidateQueryInput(t *testing.T) {
