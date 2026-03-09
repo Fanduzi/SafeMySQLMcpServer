@@ -6,6 +6,12 @@ Application entry point that initializes and starts the SafeMySQLMcpServer.
 | File | Responsibility |
 |------|---------------|
 | main.go | Parse flags, load config, create and start server |
+| main_test.go | Unit tests for config loading and signal handling |
+
+## Test Coverage
+- Config file validation
+- Signal handling for graceful shutdown
+- Config flag parsing
 
 ## Exports
 - `main()` - Application entry point

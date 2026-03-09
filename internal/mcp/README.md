@@ -7,7 +7,12 @@ Model Context Protocol implementation for MySQL operations.
 |------|---------------|
 | server.go | MCP SDK server setup |
 | tools.go | MCP tool implementations (query, list_databases, etc.) |
-| tools_test.go | Unit tests for tools |
+| tools_test.go | Unit tests for input validation and result types |
+
+## Test Coverage
+- Input validation for all 7 MCP tools
+- Result type marshaling
+- Handler creation with nil dependencies
 
 ## Exports
 - `NewMCPServer() *mcp.Server` - Create MCP server
