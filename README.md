@@ -260,12 +260,126 @@ See [docs/openapi.yaml](docs/openapi.yaml) for the complete OpenAPI specificatio
 
 SafeMySQLMcpServer provides secure MySQL access through MCP protocol with SQL injection prevention and audit logging.
 
+### High-Level Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              AI Client (Claude Code)                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              HTTP Server (:8080)                             │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
+│  │ JWT Auth    │→ │ Rate Limit  │→ │ Metrics     │→ │ MCP Handler         │ │
+│  │ Middleware  │  │ Middleware  │  │ Middleware  │  │ (7 MCP Tools)       │ │
+│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────────────┘ │
+│                                                              │               │
+│  Endpoints:                                                  │               │
+│  • POST /mcp     MCP JSON-RPC                                │               │
+│  • GET /health   Health check                                │               │
+│  • GET /metrics  Prometheus metrics                          │               │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              Security Layer                                  │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
+│  │ SQL Parser  │→ │ Security    │→ │ SQL Rewriter│→ │ Input Validator     │ │
+│  │ (vitess)    │  │ Checker     │  │ (auto-LIMIT)│  │ (identifier regex)  │ │
+│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────────────┘ │
+│                                                              │               │
+│  Security Rules:                                             │               │
+│  • DML/DDL allowlist                                         │               │
+│  • Blocked operations (DROP, TRUNCATE)                       │               │
+│  • Query timeout & row limits                                │               │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                    ┌─────────────────┼─────────────────┐
+                    ▼                 ▼                 ▼
+┌───────────────────────┐ ┌───────────────────────┐ ┌───────────────────────┐
+│    Database Router    │ │    Audit Logger       │ │   Prometheus Metrics  │
+│  ┌─────────────────┐  │ │  ┌─────────────────┐  │ │  ┌─────────────────┐  │
+│  │ Connection Pool │  │ │  │ JSON Logs       │  │ │  │ HTTP Metrics    │  │
+│  │ (per cluster)   │  │ │  │ Rotation        │  │ │  │ DB Metrics      │  │
+│  └─────────────────┘  │ │  │ Compression     │  │ │  │ Security Stats  │  │
+│                       │ │  └─────────────────┘  │ │  └─────────────────┘  │
+│  Clusters:            │ │                       │ │                       │
+│  • dev-cluster-1      │ │  Logs:                │ │  Exposed:             │
+│  • dev-cluster-2      │ │  • User identity      │ │  • /metrics endpoint  │
+│  • ...                │ │  • SQL statement      │ │  • scrape interval    │
+└───────────────────────┘ │  • Status/Duration    │ └───────────────────────┘
+          │               └───────────────────────┘
+          ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              MySQL Clusters                                  │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐              │
+│  │ dev-cluster-1   │  │ dev-cluster-2   │  │ ...             │              │
+│  │ :3306           │  │ :3306           │  │                 │              │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
 ### Request Flow
 
 ```
-Client → JWT Auth → Rate Limit → MCP Handler → SQL Validator → MySQL
-                                                    ↓
-                                              Audit Logger
+┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐
+│  Client  │───▶│ JWT Auth │───▶│  Rate    │───▶│   MCP    │───▶│ Security │
+│ Request  │    │ (verify) │    │  Limit   │    │ Handler  │    │  Check   │
+└──────────┘    └──────────┘    └──────────┘    └──────────┘    └──────────┘
+                                                      │               │
+                                                      │               ▼
+                                                      │         ┌──────────┐
+                                                      │         │ Blocked? │
+                                                      │         └──────────┘
+                                                      │               │
+                                                      │         ┌─────┴─────┐
+                                                      │         │           │
+                                                      │         ▼           ▼
+                                                      │    ┌─────────┐ ┌─────────┐
+                                                      │    │ Allow   │ │ Reject  │
+                                                      │    └─────────┘ └─────────┘
+                                                      │         │
+                                                      ▼         ▼
+                                                ┌──────────────────────┐
+                                                │   Database Router    │
+                                                │   (execute query)    │
+                                                └──────────────────────┘
+                                                         │
+                         ┌───────────────────────────────┼───────────────────────────────┐
+                         ▼                               ▼                               ▼
+                  ┌─────────────┐                 ┌─────────────┐                 ┌─────────────┐
+                  │   MySQL     │                 │   Audit     │                 │  Metrics    │
+                  │   Cluster   │                 │   Logger    │                 │  Recorder   │
+                  └─────────────┘                 └─────────────┘                 └─────────────┘
+```
+
+### Data Flow for Query Tool
+
+```
+1. Client sends: { "tool": "query", "database": "mydb", "sql": "SELECT * FROM users" }
+                              │
+                              ▼
+2. JWT Middleware: Extract user_id, user_email from token → add to context
+                              │
+                              ▼
+3. Rate Limiter: Check IP-based rate limit (default: 100 req/min)
+                              │
+                              ▼
+4. MCP Handler:
+   a. Validate database name: "mydb" → regex check
+   b. Validate SQL: "SELECT * FROM users" → length check
+   c. Parse SQL: vitess parser → AST
+   d. Security check: SELECT is allowed? → Yes
+   e. Get database connection from router
+   f. Execute query with timeout
+   g. Collect results (max 10000 rows)
+                              │
+                              ▼
+5. Audit Logger: Log { user_id, database, sql, status, duration_ms, rows_affected }
+                              │
+                              ▼
+6. Response: { "columns": [...], "rows": [...], "rows_affected": N }
 ```
 
 ### Modules
@@ -287,4 +401,4 @@ Client → JWT Auth → Rate Limit → MCP Handler → SQL Validator → MySQL
 
 ## License
 
-MIT
+[Apache 2.0](LICENSE)

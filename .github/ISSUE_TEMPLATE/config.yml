@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Documentation
+    url: https://github.com/your-org/SafeMySQLMcpServer#readme
+    about: Check the README for setup and usage instructions
+  - name: 💬 Discussions
+    url: https://github.com/your-org/SafeMySQLMcpServer/discussions
+    about: Ask questions and discuss ideas with the community
+  - name: 🔒 Security Issues
+    url: https://github.com/your-org/SafeMySQLMcpServer/security/policy
+    about: Report security vulnerabilities privately
