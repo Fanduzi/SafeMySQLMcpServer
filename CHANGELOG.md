@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Improved test coverage across multiple packages
 
-## [1.0.0] - 2024-01-15
+## [1.0.0] - 2026-03-09
 
 ### Added
 
@@ -67,7 +67,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Audit logging of all SQL operations
 - JWT token validation with configurable secret
 
-## [0.1.0] - 2024-01-01
+## [0.1.0] - 2026-03-01
 
 ### Added
 
@@ -83,8 +83,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Highlights |
 |---------|------|------------|
-| 1.0.0 | 2024-01-15 | First stable release |
-| 0.1.0 | 2024-01-01 | Initial development version |
+| 1.0.0 | 2026-03-09 | First stable release |
+| 0.1.0 | 2026-03-01 | Initial development version |
 
 ---
 
