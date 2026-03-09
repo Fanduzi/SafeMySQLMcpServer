@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - OpenAPI specification documentation (`docs/openapi.yaml`)
 - Three-level documentation system (L1: Root README, L2: Module READMEs, L3: File headers)
 - Documentation validation script (`scripts/check-docs.sh`)
+- Example configurations in `examples/config/` directory
+- Unit tests for `pkg/token` CLI tool
+- Unit tests for `cmd/server` entry point
+- Security warning in token generator README about safe token handling
 
 ### Changed
 

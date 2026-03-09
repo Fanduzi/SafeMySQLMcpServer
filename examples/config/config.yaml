@@ -1,0 +1,54 @@
+# Example Configuration for SafeMySQLMcpServer
+# Copy this file to config/config.yaml and modify as needed
+
+server:
+  host: 0.0.0.0
+  port: 8080
+  # Use environment variable for secrets in production
+  jwt_secret: ${JWT_SECRET}
+
+# Database clusters configuration
+clusters:
+  # Primary development cluster
+  dev-cluster-1:
+    host: mysql.example.com
+    port: 3306
+    username: ${DEV_DB_USER}
+    password: ${DEV_DB_PASSWORD}
+    max_open_conns: 20
+    max_idle_conns: 10
+    conn_max_lifetime: 5m
+
+  # Secondary cluster (optional)
+  # dev-cluster-2:
+  #   host: mysql2.example.com
+  #   port: 3306
+  #   username: ${DEV2_DB_USER}
+  #   password: ${DEV2_DB_PASSWORD}
+
+# Database routing
+databases:
+  user_db:
+    cluster: dev-cluster-1
+  # order_db:
+  #   cluster: dev-cluster-2
+
+# Security configuration file path
+security:
+  config_file: config/security.yaml
+
+# Audit logging
+audit:
+  enabled: true
+  log_file: logs/audit.log
+  max_sql_length: 2000
+  max_size_mb: 100
+  max_backups: 10
+  max_age_days: 30
+  compress: true
+
+# Rate limiting
+rate_limit:
+  enabled: true
+  requests_per_minute: 100
+  burst: 20

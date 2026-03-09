@@ -1,0 +1,39 @@
+# Example Security Configuration for SafeMySQLMcpServer
+# Copy this file to config/security.yaml and modify as needed
+
+security:
+  # Allowed DML operations
+  # Options: SELECT, INSERT, UPDATE, DELETE
+  allowed_dml:
+    - SELECT
+    - INSERT
+    - UPDATE
+    - DELETE
+
+  # Allowed DDL operations
+  # Options: CREATE_TABLE, CREATE_INDEX, ALTER_TABLE, DROP_TABLE, DROP_INDEX
+  allowed_ddl:
+    - CREATE_TABLE
+    - CREATE_INDEX
+    - ALTER_TABLE
+
+  # Blocked operations (always blocked even if in allowlist)
+  # Options: DROP, TRUNCATE, ALTER_USER, GRANT, REVOKE
+  blocked:
+    - DROP
+    - TRUNCATE
+
+  # Auto-add LIMIT to UPDATE/DELETE without WHERE
+  auto_limit: 1000
+
+  # Maximum allowed LIMIT value
+  max_limit: 10000
+
+  # Query timeout
+  query_timeout: 30s
+
+  # Maximum rows returned
+  max_rows: 10000
+
+  # Maximum SQL length (in characters)
+  max_sql_length: 100000
