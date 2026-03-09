@@ -1,4 +1,8 @@
-// Package security handles SQL parsing and security checks
+// Package security provides SQL rewriting for safety.
+// input: ParsedSQL from parser, SecurityConfig rules
+// output: RewriteResult with modified SQL, warnings
+// pos: security layer, rewrites dangerous SQL (adds LIMIT, caps values)
+// note: if this file changes, update header and internal/security/README.md
 package security
 
 import (

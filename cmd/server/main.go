@@ -1,4 +1,8 @@
-// Package main is the entry point for the SafeMySQLMcpServer
+// Package main provides the entry point for SafeMySQLMcpServer.
+// input: config.yaml file path (flag), JWT_SECRET env var
+// output: starts HTTP server, handles graceful shutdown
+// pos: application entry point, wires config watcher to server
+// note: if this file changes, update header and cmd/server/README.md
 package main
 
 import (

@@ -1,4 +1,8 @@
-// Package metrics provides Prometheus metrics for the MCP server
+// Package metrics provides Prometheus metrics for the MCP server.
+// input: HTTP requests, DB queries, auth events, MCP calls
+// output: prometheus.Counter, prometheus.Histogram, prometheus.Gauge
+// pos: observability layer, exposes /metrics endpoint for Prometheus
+// note: if this file changes, update header and internal/metrics/README.md
 package metrics
 
 import (

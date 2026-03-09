@@ -256,6 +256,35 @@ The project includes GitHub Actions workflows for:
 
 See [docs/openapi.yaml](docs/openapi.yaml) for the complete OpenAPI specification.
 
+## Architecture
+
+SafeMySQLMcpServer provides secure MySQL access through MCP protocol with SQL injection prevention and audit logging.
+
+### Request Flow
+
+```
+Client → JWT Auth → Rate Limit → MCP Handler → SQL Validator → MySQL
+                                                    ↓
+                                              Audit Logger
+```
+
+### Modules
+
+| Module | Description | Doc |
+|--------|-------------|-----|
+| cmd/server | Application entry point | [README](cmd/server/README.md) |
+| internal/auth | JWT authentication and token generation | [README](internal/auth/README.md) |
+| internal/config | Configuration loading and hot reload | [README](internal/config/README.md) |
+| internal/database | MySQL connection pool and routing | [README](internal/database/README.md) |
+| internal/mcp | MCP protocol implementation and tools | [README](internal/mcp/README.md) |
+| internal/metrics | Prometheus metrics collection | [README](internal/metrics/README.md) |
+| internal/security | SQL parsing, validation, and rewriting | [README](internal/security/README.md) |
+| internal/server | HTTP server with middleware | [README](internal/server/README.md) |
+| internal/audit | Audit logging with rotation | [README](internal/audit/README.md) |
+| internal/validation | Input validation utilities | [README](internal/validation/README.md) |
+| internal/constants | Shared constants | [README](internal/constants/README.md) |
+| pkg/token | CLI tool for generating JWT tokens | [README](pkg/token/README.md) |
+
 ## License
 
 MIT

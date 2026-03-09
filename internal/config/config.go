@@ -1,4 +1,8 @@
-// Package config handles configuration loading and management
+// Package config handles configuration loading and management.
+// input: config.yaml, security.yaml, env vars (${VAR} expansion)
+// output: Config, SecurityConfig, ReloadableConfig, Watcher
+// pos: configuration layer, loads and hot-reloads server config
+// note: if this file changes, update header and internal/config/README.md
 package config
 
 import (

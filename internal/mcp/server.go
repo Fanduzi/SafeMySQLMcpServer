@@ -1,4 +1,8 @@
-// Package mcp handles MCP protocol implementation
+// Package mcp handles MCP protocol implementation.
+// input: MCP SDK configuration
+// output: *mcp.Server instance, tool registration
+// pos: MCP layer entry point, creates SDK server for tool registration
+// note: if this file changes, update header and internal/mcp/README.md
 package mcp
 
 import (

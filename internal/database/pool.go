@@ -1,4 +1,8 @@
-// Package database handles MySQL connection pooling
+// Package database handles MySQL connection pooling and routing.
+// input: config.ClustersConfig (host, port, credentials)
+// output: *sql.DB connections, Query/Exec helpers
+// pos: data layer, manages MySQL connections for all queries
+// note: if this file changes, update header and internal/database/README.md
 package database
 
 import (

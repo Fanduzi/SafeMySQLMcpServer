@@ -1,4 +1,8 @@
-// Package audit handles audit logging
+// Package audit handles audit logging with rotation.
+// input: audit.Entry (user, sql, status, duration), config.AuditConfig
+// output: JSON log files with rotation, compression
+// pos: observability layer, records all SQL operations for compliance
+// note: if this file changes, update header and internal/audit/README.md
 package audit
 
 import (

@@ -1,4 +1,8 @@
-// Package security handles SQL parsing and security checks
+// Package security performs security checks on SQL statements.
+// input: ParsedSQL from parser.go, SecurityConfig rules
+// output: CheckResult (allowed/blocked, reason, autoRewrite flag)
+// pos: security layer, enforces DML/DDL allowlists and blocklists
+// note: if this file changes, update header and internal/security/README.md
 package security
 
 import (

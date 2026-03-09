@@ -1,4 +1,8 @@
-// Package constants defines shared constants for the application
+// Package constants defines shared constants for the application.
+// input: none (compile-time values)
+// output: MaxIdentifierLength, MaxSQLLength, timeouts, defaults
+// pos: shared layer, provides compile-time constants to all packages
+// note: if this file changes, update header and internal/constants/README.md
 package constants
 
 import (

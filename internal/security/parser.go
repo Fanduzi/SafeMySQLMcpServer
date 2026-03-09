@@ -1,4 +1,8 @@
-// Package security handles SQL parsing and security checks
+// Package security handles SQL parsing and security checks.
+// input: raw SQL string from user
+// output: ParsedSQL with type, tables, columns
+// pos: security layer, parses SQL using TiDB parser AST
+// note: if this file changes, update header and internal/security/README.md
 package security
 
 import (

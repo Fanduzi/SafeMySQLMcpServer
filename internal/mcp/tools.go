@@ -1,4 +1,8 @@
-// Package mcp handles MCP protocol implementation
+// Package mcp implements MCP tools for MySQL operations.
+// input: QueryInput, ListTablesInput, etc. from MCP SDK
+// output: QueryResult, ListTablesResult, etc. to MCP SDK
+// pos: tool layer, bridges MCP protocol to database layer
+// note: if this file changes, update header and internal/mcp/README.md
 package mcp
 
 import (

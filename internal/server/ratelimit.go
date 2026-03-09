@@ -1,4 +1,8 @@
-// Package server handles HTTP server setup
+// Package server provides IP-based rate limiting middleware.
+// input: HTTP request IP (X-Forwarded-For, X-Real-IP, RemoteAddr)
+// output: rate limit decision (Allow/Deny), HTTP 429 on exceeded
+// pos: middleware layer, protects against DoS and abuse
+// note: if this file changes, update header and internal/server/README.md
 package server
 
 import (

@@ -1,4 +1,8 @@
-// Package config handles configuration loading and management
+// Package config provides configuration validation helpers.
+// input: Config, SecurityConfig structs
+// output: validation errors, normalized config
+// pos: validation layer, ensures config integrity before use
+// note: if this file changes, update header and internal/config/README.md
 package config
 
 import (

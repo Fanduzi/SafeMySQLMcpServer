@@ -1,4 +1,8 @@
-// Package main provides a CLI tool for generating JWT tokens
+// Package main provides a CLI tool for generating JWT tokens.
+// input: CLI flags (user, email, expire, secret), JWT_SECRET env
+// output: JWT token string to stdout
+// pos: CLI utility, used by admins to generate tokens for API access
+// note: if this file changes, update header and pkg/token/README.md
 package main
 
 import (

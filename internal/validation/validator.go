@@ -1,4 +1,8 @@
-// Package validation provides input validation utilities
+// Package validation provides input validation utilities.
+// input: database names, table names, SQL strings, search patterns
+// output: validation errors, QuoteIdentifier, EscapeLikePattern helpers
+// pos: input validation layer, prevents SQL injection via identifier validation
+// note: if this file changes, update header and internal/validation/README.md
 package validation
 
 import (

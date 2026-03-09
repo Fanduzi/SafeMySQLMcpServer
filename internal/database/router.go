@@ -1,4 +1,8 @@
-// Package database handles MySQL connection pooling and routing
+// Package database handles MySQL connection pooling and routing.
+// input: database name, SQL queries, Pool connections
+// output: Query results, Exec results, database routing
+// pos: data router layer, maps logical db names to physical clusters
+// note: if this file changes, update header and internal/database/README.md
 package database
 
 import (

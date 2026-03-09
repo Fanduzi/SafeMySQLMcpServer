@@ -1,4 +1,8 @@
-// Package auth handles JWT authentication
+// Package auth handles JWT authentication for the MCP server.
+// input: JWT_SECRET env var, Authorization header, context
+// output: Validator, Claims, context helpers (GetUserID, GetUserEmail)
+// pos: authentication layer, validates JWT tokens and extracts user info
+// note: if this file changes, update header and internal/auth/README.md
 package auth
 
 import (

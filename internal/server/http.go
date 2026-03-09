@@ -1,4 +1,8 @@
-// Package server handles HTTP server setup
+// Package server handles HTTP server setup and routing.
+// input: config.ReloadableConfig, HTTP requests
+// output: HTTP responses, MCP protocol handling
+// pos: HTTP layer, wires middleware (auth, rate limit, metrics) to handlers
+// note: if this file changes, update header and internal/server/README.md
 package server
 
 import (

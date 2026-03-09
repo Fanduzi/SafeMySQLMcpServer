@@ -1,3 +1,8 @@
+// Package config provides file watching for hot reload.
+// input: config file paths, fsnotify events
+// output: OnChange callbacks when files change
+// pos: config hot reload, monitors config files for changes
+// note: if this file changes, update header and internal/config/README.md
 package config
 
 import (
