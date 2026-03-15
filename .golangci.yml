@@ -17,14 +17,12 @@ linters:
     - gocritic      # 代码风格检查
     - sqlclosecheck # SQL rows/stmt 关闭检查
     - bodyclose     # HTTP body 关闭检查
+    - shadow        # 变量遮蔽检查 (替代 govet.check-shadowing)
 
 linters-settings:
   errcheck:
     check-type-assertions: true
     check-blank: true
-
-  govet:
-    check-shadowing: true
 
   gocritic:
     enabled-tags:
