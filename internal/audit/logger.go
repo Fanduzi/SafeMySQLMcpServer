@@ -117,7 +117,7 @@ func (l *Logger) UpdateConfig(cfg *config.AuditConfig) error {
 	if !cfg.Enabled {
 		l.enabled = false
 		if l.writer != nil {
-			l.writer.Close()
+			_ = l.writer.Close()
 			l.writer = nil
 		}
 		return nil

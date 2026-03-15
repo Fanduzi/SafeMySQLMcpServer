@@ -33,7 +33,7 @@ func NewWatcher(configPath string) (*Watcher, error) {
 	// Get absolute path
 	absPath, err := filepath.Abs(configPath)
 	if err != nil {
-		fsWatcher.Close()
+		_ = fsWatcher.Close()
 		return nil, err
 	}
 
@@ -46,7 +46,7 @@ func NewWatcher(configPath string) (*Watcher, error) {
 	// Watch the directory containing the config file
 	configDir := filepath.Dir(absPath)
 	if err := fsWatcher.Add(configDir); err != nil {
-		fsWatcher.Close()
+		_ = fsWatcher.Close()
 		return nil, err
 	}
 
@@ -141,7 +141,7 @@ func (w *Watcher) handleEvent(filename string) {
 // Stop stops the watcher
 func (w *Watcher) Stop() {
 	close(w.done)
-	w.watcher.Close()
+	_ = w.watcher.Close()
 }
 
 // ReloadableConfig holds configuration that can be hot-reloaded

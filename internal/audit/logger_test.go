@@ -29,10 +29,10 @@ func TestNewLogger_Enabled(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	tmpDir.Close()
-	os.Remove(tmpDir.Name())
-	os.MkdirAll(tmpDir.Name(), 0755)
-	defer os.RemoveAll(tmpDir.Name())
+	_ = tmpDir.Close()
+	_ = os.Remove(tmpDir.Name())
+	_ = os.MkdirAll(tmpDir.Name(), 0755)
+	defer func() { _ = os.RemoveAll(tmpDir.Name()) }()
 
 	cfg := &config.AuditConfig{
 		Enabled:      true,
@@ -48,7 +48,7 @@ func TestNewLogger_Enabled(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewLogger() error = %v", err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	if !logger.enabled {
 		t.Error("Logger should be enabled")
@@ -60,10 +60,10 @@ func TestLogger_Log(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	tmpDir.Close()
-	os.Remove(tmpDir.Name())
-	os.MkdirAll(tmpDir.Name(), 0755)
-	defer os.RemoveAll(tmpDir.Name())
+	_ = tmpDir.Close()
+	_ = os.Remove(tmpDir.Name())
+	_ = os.MkdirAll(tmpDir.Name(), 0755)
+	defer func() { _ = os.RemoveAll(tmpDir.Name()) }()
 
 	cfg := &config.AuditConfig{
 		Enabled:      true,
@@ -79,7 +79,7 @@ func TestLogger_Log(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewLogger() error = %v", err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	entry := Entry{
 		UserID:     "user123",
@@ -194,7 +194,7 @@ func TestLogger_LogWithTimestamp(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewLogger() error = %v", err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Entry without timestamp - should be set automatically
 	entry := Entry{
@@ -243,7 +243,7 @@ func TestLogger_LogTruncation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewLogger() error = %v", err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	longSQL := "SELECT * FROM users WHERE id = 1 AND name = 'test'"
 	entry := Entry{
