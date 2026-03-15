@@ -11,6 +11,9 @@ bin/
 .vscode/
 *.swp
 *.swo
+.claude
+AGENTS.md
+CLAUDE.md
 
 # Test coverage
 *.out
