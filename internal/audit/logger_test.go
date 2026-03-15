@@ -179,10 +179,10 @@ func TestLogger_LogWithTimestamp(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	tmpDir.Close()
-	os.Remove(tmpDir.Name())
-	os.MkdirAll(tmpDir.Name(), 0755)
-	defer os.RemoveAll(tmpDir.Name())
+	_ = tmpDir.Close()
+	_ = os.Remove(tmpDir.Name())
+	_ = os.MkdirAll(tmpDir.Name(), 0755)
+	defer func() { _ = os.RemoveAll(tmpDir.Name()) }()
 
 	cfg := &config.AuditConfig{
 		Enabled:      true,

@@ -181,7 +181,7 @@ func TestFlagDefaults(t *testing.T) {
 	secret := fs.String("secret", "", "JWT secret")
 
 	// Parse empty args to get defaults
-	fs.Parse([]string{})
+	_ = fs.Parse([]string{})
 
 	// Verify defaults
 	if *user != "" {
@@ -204,8 +204,8 @@ func TestEnvironmentVariable(t *testing.T) {
 
 	// Set environment variable
 	oldEnv := os.Getenv("JWT_SECRET")
-	os.Setenv("JWT_SECRET", testSecret)
-	defer os.Setenv("JWT_SECRET", oldEnv)
+	_ = os.Setenv("JWT_SECRET", testSecret)
+	defer func() { _ = os.Setenv("JWT_SECRET", oldEnv) }()
 
 	// Simulate the logic from main.go
 	jwtSecret := ""

@@ -187,10 +187,10 @@ func TestNewValidatorFromEnv(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.envValue != "" {
-				os.Setenv("JWT_SECRET", tt.envValue)
-				defer os.Unsetenv("JWT_SECRET")
+				_ = os.Setenv("JWT_SECRET", tt.envValue)
+				defer func() { _ = os.Unsetenv("JWT_SECRET") }()
 			} else {
-				os.Unsetenv("JWT_SECRET")
+				_ = os.Unsetenv("JWT_SECRET")
 			}
 
 			validator, err := NewValidatorFromEnv(tt.configValue)
