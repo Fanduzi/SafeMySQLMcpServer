@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -75,10 +76,10 @@ func TestWatcher_OnChange(t *testing.T) {
 	}
 	defer watcher.Stop()
 
-	// Register callback
-	called := false
+	// Register callback with atomic variable for thread safety
+	var called atomic.Bool
 	watcher.OnChange(func(cfg *Config, sec *SecurityConfig) {
-		called = true
+		called.Store(true)
 	})
 
 	// Start watcher
@@ -98,7 +99,7 @@ func TestWatcher_OnChange(t *testing.T) {
 
 	// Note: callback may or may not be called depending on timing
 	// Just verify it doesn't panic
-	_ = called
+	_ = called.Load()
 }
 
 func TestWatcher_Stop(t *testing.T) {
