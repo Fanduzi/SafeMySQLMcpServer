@@ -240,7 +240,7 @@ func TestPool_ConcurrentAccess(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		go func() {
 			// Concurrent Get (will fail but shouldn't panic)
-			pool.Get("unknown")
+			_, _ = pool.Get("unknown")
 			done <- true
 		}()
 	}

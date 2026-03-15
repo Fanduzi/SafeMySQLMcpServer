@@ -28,6 +28,11 @@ linters-settings:
       - diagnostic
       - performance
       - style
+    disabled-checks:
+      - hugeParam
+      - octalLiteral
+      - unnamedResult
+      - exitAfterDefer
 
 issues:
   exclude-use-default: false

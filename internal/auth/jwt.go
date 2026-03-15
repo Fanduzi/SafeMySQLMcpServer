@@ -89,7 +89,7 @@ func NewValidatorFromEnv(configSecret string) (*Validator, error) {
 
 // GetJWTSecret retrieves the JWT secret from environment variable or config
 // Returns the secret, the source ("env" or "config"), and any error
-func GetJWTSecret(configSecret string) (string, string, error) {
+func GetJWTSecret(configSecret string) (secret, source string, _ error) {
 	// Priority 1: Environment variable
 	if secret := os.Getenv(EnvJWTSecret); secret != "" {
 		return secret, "env", nil
@@ -162,7 +162,7 @@ func ExtractToken(authHeader string) string {
 	}
 
 	parts := strings.Split(authHeader, " ")
-	if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+	if len(parts) != 2 || !strings.EqualFold(parts[0], "bearer") {
 		return ""
 	}
 

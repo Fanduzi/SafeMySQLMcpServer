@@ -52,7 +52,6 @@ type Metrics struct {
 	MCPErrors       *prometheus.CounterVec
 
 	registry *prometheus.Registry
-	once     sync.Once
 }
 
 var (

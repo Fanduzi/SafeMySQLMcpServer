@@ -63,7 +63,7 @@ func New(cfg *config.ReloadableConfig) (*Server, error) {
 	// Create audit logger
 	auditLogger, err := audit.NewLogger(&config.Audit)
 	if err != nil {
-		pool.Close()
+		_ = pool.Close()
 		return nil, fmt.Errorf("create audit logger: %w", err)
 	}
 
@@ -138,7 +138,7 @@ func (s *Server) Start() error {
 // handleHealth handles health check requests
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
+	_, _ = w.Write([]byte("OK"))
 }
 
 // metricsMiddleware records HTTP request metrics

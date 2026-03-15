@@ -443,7 +443,7 @@ func (h *Handler) executeQuery(ctx context.Context, db, sqlStr string) (*QueryRe
 			})
 			return nil, err
 		}
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 
 		// Get column names
 		cols, err := rows.Columns()

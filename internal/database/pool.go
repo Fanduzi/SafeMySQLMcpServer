@@ -43,7 +43,7 @@ func NewPool(clusters config.ClustersConfig) (*Pool, error) {
 	for name, cfg := range clusters {
 		db, err := p.connect(cfg)
 		if err != nil {
-			p.Close()
+			_ = p.Close()
 			return nil, fmt.Errorf("connect to cluster %s: %w", name, err)
 		}
 		p.clusters[name] = &managedDB{db: db}
@@ -179,7 +179,9 @@ func (p *Pool) UpdateConfig(clusters config.ClustersConfig) error {
 			p.mu.Lock()
 			for name := range toClose {
 				if mdb, ok := p.clusters[name]; ok {
-					mdb.db.Close()
+					if err := mdb.db.Close(); err != nil {
+						log.Printf("Error force-closing cluster %s: %v", name, err)
+					}
 					delete(p.clusters, name)
 				}
 			}

@@ -16,14 +16,14 @@ func TestMain_InvalidConfigPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	defer os.Remove(tmpFile.Name())
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
 
 	// Write invalid YAML
 	_, err = tmpFile.WriteString("invalid: yaml: content: [")
 	if err != nil {
 		t.Fatalf("Failed to write to temp file: %v", err)
 	}
-	tmpFile.Close()
+	_ = tmpFile.Close()
 
 	// Try to load the invalid config - this tests the config package
 	// The actual main() would call log.Fatalf, but we verify the error path
@@ -103,7 +103,7 @@ clusters: {}
 audit:
   enabled: false
 `
-	err := os.WriteFile(configPath, []byte(configContent), 0644)
+	err := os.WriteFile(configPath, []byte(configContent), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to write config: %v", err)
 	}

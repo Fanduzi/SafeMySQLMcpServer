@@ -171,7 +171,7 @@ func setDefaults(cfg *Config) {
 }
 
 // GetDSN returns the MySQL DSN for a cluster
-func (c ClusterConfig) GetDSN() string {
+func (c *ClusterConfig) GetDSN() string {
 	return fmt.Sprintf("%s:%s@tcp(%s:%d)/?parseTime=true&loc=Local&charset=utf8mb4",
 		c.Username, c.Password, c.Host, c.Port)
 }
@@ -180,7 +180,7 @@ func (c ClusterConfig) GetDSN() string {
 func (s *SecurityRules) IsBlocked(op string) bool {
 	opUpper := strings.ToUpper(op)
 	for _, blocked := range s.Blocked {
-		if strings.ToUpper(blocked) == opUpper {
+		if strings.EqualFold(blocked, opUpper) {
 			return true
 		}
 	}
@@ -191,7 +191,7 @@ func (s *SecurityRules) IsBlocked(op string) bool {
 func (s *SecurityRules) IsDMLAllowed(op string) bool {
 	opUpper := strings.ToUpper(op)
 	for _, allowed := range s.AllowedDML {
-		if strings.ToUpper(allowed) == opUpper {
+		if strings.EqualFold(allowed, opUpper) {
 			return true
 		}
 	}
@@ -202,7 +202,7 @@ func (s *SecurityRules) IsDMLAllowed(op string) bool {
 func (s *SecurityRules) IsDDLAllowed(op string) bool {
 	opUpper := strings.ToUpper(op)
 	for _, allowed := range s.AllowedDDL {
-		if strings.ToUpper(allowed) == opUpper {
+		if strings.EqualFold(allowed, opUpper) {
 			return true
 		}
 	}
