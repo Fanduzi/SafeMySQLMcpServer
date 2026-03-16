@@ -81,14 +81,14 @@ func TestLogger_Log(t *testing.T) {
 	}
 	defer func() { _ = logger.Close() }()
 
-	entry := &Entry{
+	entry := Entry{
 		UserID:     "user123",
 		UserEmail:  "test@example.com",
 		Database:   "mydb",
 		SQL:        "SELECT * FROM users",
 		SQLType:    "SELECT",
-        Status:     "success",
-        DurationMs: 50,
+		Status:     "success",
+		DurationMs: 50,
 	}
 
 	logger.Log(entry)
