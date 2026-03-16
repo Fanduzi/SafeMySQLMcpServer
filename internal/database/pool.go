@@ -186,7 +186,7 @@ func (p *Pool) UpdateConfig(clusters config.ClustersConfig) error {
 				}
 			}
 			p.mu.Unlock()
-			break
+			return nil
 		case <-time.After(100 * time.Millisecond):
 		}
 	}

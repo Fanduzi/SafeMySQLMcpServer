@@ -27,8 +27,8 @@ type RateLimiterConfig struct {
 // DefaultRateLimiterConfig returns default rate limiter configuration
 func DefaultRateLimiterConfig() RateLimiterConfig {
 	return RateLimiterConfig{
-		RequestsPerSecond: 10,  // 10 requests per second
-		Burst:             20,  // Allow burst of 20 requests
+		RequestsPerSecond: 10, // 10 requests per second
+		Burst:             20, // Allow burst of 20 requests
 		CleanupInterval:   time.Minute,
 	}
 }
@@ -119,7 +119,8 @@ func (s *Server) rateLimitMiddleware(limiter *IPRateLimiter, next http.Handler) 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ip := getRealIP(r)
 		if !limiter.GetLimiter(ip).Allow() {
-			log.Printf("Rate limit exceeded for IP: %s", ip)
+			// #nosec G706 -- IP is logged for operational diagnostics when rate limiting triggers.
+			log.Printf("Rate limit exceeded for IP: %q", ip)
 			// Record rate limit exceeded metric
 			if s.metrics != nil {
 				s.metrics.RecordRateLimitExceeded(ip)

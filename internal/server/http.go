@@ -12,8 +12,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/fan/safe-mysql-mcp/internal/auth"
 	"github.com/fan/safe-mysql-mcp/internal/audit"
+	"github.com/fan/safe-mysql-mcp/internal/auth"
 	"github.com/fan/safe-mysql-mcp/internal/config"
 	"github.com/fan/safe-mysql-mcp/internal/database"
 	"github.com/fan/safe-mysql-mcp/internal/mcp"

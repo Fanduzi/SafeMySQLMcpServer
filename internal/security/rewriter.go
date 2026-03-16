@@ -25,7 +25,7 @@ type Rewriter struct {
 func NewRewriter(rules *config.SecurityRules) *Rewriter {
 	return &Rewriter{
 		rules: rules,
-	 }
+	}
 }
 
 // RewriteResult represents the result of SQL rewriting
@@ -67,15 +67,15 @@ func (r *Rewriter) Rewrite(parsed *ParsedSQL) *RewriteResult {
 
 // addLimit adds a LIMIT clause to the SQL
 func (r *Rewriter) addLimit(sql string, limit int) string {
-    // Validate limit is a positive integer
-    if limit <= 0 {
-        return sql
-    }
+	// Validate limit is a positive integer
+	if limit <= 0 {
+		return sql
+	}
 
-    // Remove trailing semicolon and whitespace
-    sql = strings.TrimRight(strings.TrimSpace(sql), ";")
+	// Remove trailing semicolon and whitespace
+	sql = strings.TrimRight(strings.TrimSpace(sql), ";")
 
-    return fmt.Sprintf("%s LIMIT %d", sql, limit)
+	return fmt.Sprintf("%s LIMIT %d", sql, limit)
 }
 
 // capLimit caps the LIMIT value in a SELECT statement
@@ -102,5 +102,5 @@ func (r *Rewriter) capLimit(sql string, maxLimit int) string {
 
 // UpdateRules updates the security rules
 func (r *Rewriter) UpdateRules(rules *config.SecurityRules) {
-    r.rules = rules
+	r.rules = rules
 }

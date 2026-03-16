@@ -206,7 +206,7 @@ func TestGetRealIP(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
 			req.RemoteAddr = tt.remoteAddr
 			for k, v := range tt.headers {
 				req.Header.Set(k, v)
@@ -265,7 +265,7 @@ func TestMetricsMiddleware(t *testing.T) {
 	wrapped := s.metricsMiddleware("/test", handler)
 
 	// Make a request
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
 	rec := httptest.NewRecorder()
 	wrapped.ServeHTTP(rec, req)
 
@@ -276,7 +276,7 @@ func TestMetricsMiddleware(t *testing.T) {
 
 	// Verify metrics were recorded
 	metricsHandler := m.Handler()
-	req = httptest.NewRequest(http.MethodGet, "/metrics", nil)
+	req = httptest.NewRequest(http.MethodGet, "/metrics", http.NoBody)
 	rec = httptest.NewRecorder()
 	metricsHandler.ServeHTTP(rec, req)
 

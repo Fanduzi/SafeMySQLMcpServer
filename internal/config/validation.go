@@ -21,8 +21,8 @@ func (c *Config) Validate() error {
 	for name, cluster := range c.Clusters {
 		if err := cluster.Validate(); err != nil {
 			return fmt.Errorf("cluster %s: %w", name, err)
-	 }
-	 }
+		}
+	}
 
 	// Validate audit config
 	if c.Audit.Enabled {

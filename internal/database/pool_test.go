@@ -295,4 +295,3 @@ func TestManagedDB_RefCountOperations(t *testing.T) {
 		t.Error("refCount should be 1 after decrement")
 	}
 }
-

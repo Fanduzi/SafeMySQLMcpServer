@@ -15,12 +15,12 @@ import (
 
 // Watcher monitors configuration files for changes
 type Watcher struct {
-	watcher       *fsnotify.Watcher
-	configPath    string
-	securityPath  string
-	callbacks     []func(*Config, *SecurityConfig)
-	mu            sync.RWMutex
-	done          chan struct{}
+	watcher      *fsnotify.Watcher
+	configPath   string
+	securityPath string
+	callbacks    []func(*Config, *SecurityConfig)
+	mu           sync.RWMutex
+	done         chan struct{}
 }
 
 // NewWatcher creates a new configuration file watcher
@@ -146,9 +146,9 @@ func (w *Watcher) Stop() {
 
 // ReloadableConfig holds configuration that can be hot-reloaded
 type ReloadableConfig struct {
-	mu         sync.RWMutex
-	config     *Config
-	security   *SecurityConfig
+	mu       sync.RWMutex
+	config   *Config
+	security *SecurityConfig
 }
 
 // NewReloadableConfig creates a new reloadable configuration

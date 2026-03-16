@@ -8,6 +8,7 @@ package metrics
 import (
 	"log"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -23,10 +24,10 @@ type Metrics struct {
 	RequestsActive  prometheus.Gauge
 
 	// Query metrics
-	QueriesTotal    *prometheus.CounterVec
-	QueryDuration   *prometheus.HistogramVec
-	QueriesActive   prometheus.Gauge
-	QueryRows       *prometheus.HistogramVec
+	QueriesTotal  *prometheus.CounterVec
+	QueryDuration *prometheus.HistogramVec
+	QueriesActive prometheus.Gauge
+	QueryRows     *prometheus.HistogramVec
 
 	// Security metrics
 	SQLInjectionAttempts *prometheus.CounterVec
@@ -304,7 +305,7 @@ func (m *Metrics) Handler() http.Handler {
 
 // RecordRequest records an HTTP request
 func (m *Metrics) RecordRequest(method, path string, status int, duration time.Duration) {
-	m.RequestsTotal.WithLabelValues(method, path, string(rune(status))).Inc()
+	m.RequestsTotal.WithLabelValues(method, path, strconv.Itoa(status)).Inc()
 	m.RequestDuration.WithLabelValues(method, path).Observe(duration.Seconds())
 }
 

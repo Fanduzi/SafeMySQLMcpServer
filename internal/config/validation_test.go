@@ -17,11 +17,11 @@ func TestConfig_Validate(t *testing.T) {
 				Server: ServerConfig{Port: 8080},
 				Clusters: ClustersConfig{
 					"primary": ClusterConfig{
-						Host:         "localhost",
-						Port:         3306,
-						Username:     "root",
-						MaxOpenConns: 10,
-						MaxIdleConns: 5,
+						Host:            "localhost",
+						Port:            3306,
+						Username:        "root",
+						MaxOpenConns:    10,
+						MaxIdleConns:    5,
 						ConnMaxLifetime: 5 * time.Minute,
 					},
 				},
@@ -47,7 +47,7 @@ func TestConfig_Validate(t *testing.T) {
 			name: "audit enabled without log file",
 			config: &Config{
 				Server: ServerConfig{Port: 8080},
-				Audit: AuditConfig{Enabled: true, LogFile: ""},
+				Audit:  AuditConfig{Enabled: true, LogFile: ""},
 			},
 			wantErr: true,
 		},
@@ -55,7 +55,7 @@ func TestConfig_Validate(t *testing.T) {
 			name: "audit enabled with invalid max size",
 			config: &Config{
 				Server: ServerConfig{Port: 8080},
-				Audit: AuditConfig{Enabled: true, LogFile: "/tmp/audit.log", MaxSizeMB: 0},
+				Audit:  AuditConfig{Enabled: true, LogFile: "/tmp/audit.log", MaxSizeMB: 0},
 			},
 			wantErr: true,
 		},
@@ -179,11 +179,11 @@ func TestSecurityRules_Validate(t *testing.T) {
 		{
 			name: "valid config",
 			config: SecurityRules{
-				AllowedDML:     []string{"SELECT", "INSERT"},
-				AllowedDDL:     []string{"CREATE_TABLE"},
-				QueryTimeout:   30 * time.Second,
-				MaxRows:        10000,
-				AutoLimit:      1000,
+				AllowedDML:   []string{"SELECT", "INSERT"},
+				AllowedDDL:   []string{"CREATE_TABLE"},
+				QueryTimeout: 30 * time.Second,
+				MaxRows:      10000,
+				AutoLimit:    1000,
 			},
 			wantErr: false,
 		},
@@ -199,7 +199,7 @@ func TestSecurityRules_Validate(t *testing.T) {
 			name: "conflicting DDL rules",
 			config: SecurityRules{
 				AllowedDDL: []string{"CREATE_TABLE"},
-				Blocked:     []string{"CREATE_TABLE"},
+				Blocked:    []string{"CREATE_TABLE"},
 			},
 			wantErr: true,
 		},
@@ -228,10 +228,10 @@ func TestSecurityRules_Validate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			 err := tt.config.Validate()
-		 if (err != nil) != tt.wantErr {
-                t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
-            }
-        })
-    }
+			err := tt.config.Validate()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
 }

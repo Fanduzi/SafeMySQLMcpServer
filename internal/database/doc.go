@@ -16,10 +16,10 @@
 // # Graceful Reconnection
 //
 // When configuration changes (e.g., password rotation), the pool:
-//   1. Marks existing connections for graceful close
-//   2. Waits for active queries to complete (with timeout)
-//   3. Closes connections when reference count reaches zero
-//   4. Force closes after timeout (30 seconds)
+//  1. Marks existing connections for graceful close
+//  2. Waits for active queries to complete (with timeout)
+//  3. Closes connections when reference count reaches zero
+//  4. Force closes after timeout (30 seconds)
 //
 // # Example Usage
 //

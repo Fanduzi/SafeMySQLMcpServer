@@ -87,6 +87,7 @@ type AuditConfig struct {
 
 // Load loads configuration from a YAML file
 func Load(path string) (*Config, error) {
+	// #nosec G304 -- configuration path is provided by trusted operator input.
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("read config file: %w", err)
@@ -108,6 +109,7 @@ func Load(path string) (*Config, error) {
 
 // LoadSecurity loads security configuration from a YAML file
 func LoadSecurity(path string) (*SecurityConfig, error) {
+	// #nosec G304 -- security config path is provided by trusted operator input.
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("read security config file: %w", err)

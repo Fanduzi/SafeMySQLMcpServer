@@ -306,7 +306,7 @@ func TestMarshalResult(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			data := MarshalResult(tt.input)
-			if len(data) == 0 {
+			if data == "" {
 				t.Error("MarshalResult() returned empty data")
 			}
 			if Contains(data, "error") && !Contains(data, "failed to marshal") {
@@ -319,7 +319,7 @@ func TestMarshalResult(t *testing.T) {
 
 // Helper function
 func Contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && ContainsHelper(s, substr))
+	return len(s) >= len(substr) && (s == substr || s != "" && ContainsHelper(s, substr))
 }
 
 func ContainsHelper(s, substr string) bool {

@@ -93,8 +93,8 @@ func TestRouter_ListDatabases(t *testing.T) {
 	}
 
 	databases := config.DatabasesConfig{
-		"mydb":   {Cluster: "primary"},
-		"testdb": {Cluster: "replica"},
+		"mydb":    {Cluster: "primary"},
+		"testdb":  {Cluster: "replica"},
 		"admindb": {Cluster: "admin"},
 	}
 

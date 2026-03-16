@@ -13,12 +13,12 @@ import (
 // TestTokenGeneration tests the core token generation functionality
 func TestTokenGeneration(t *testing.T) {
 	tests := []struct {
-		name     string
-		user     string
-		email    string
-		expire   time.Duration
-		secret   string
-		wantErr  bool
+		name    string
+		user    string
+		email   string
+		expire  time.Duration
+		secret  string
+		wantErr bool
 	}{
 		{
 			name:    "valid token 1 hour",

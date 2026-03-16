@@ -79,8 +79,8 @@ func TestChecker_Check(t *testing.T) {
 			wantAllow: true,
 		},
 		{
-			name: "nil rules allow all",
-			rules: nil,
+			name:      "nil rules allow all",
+			rules:     nil,
 			sql:       "SELECT * FROM users",
 			wantAllow: true,
 		},

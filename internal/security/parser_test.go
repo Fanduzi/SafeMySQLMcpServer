@@ -107,10 +107,10 @@ func TestParser_Parse(t *testing.T) {
 			wantType: SQLTypeOther, // EXPLAIN is wrapped around SELECT, parsed as OTHER
 		},
 		{
-			name:    "empty SQL returns nil",
-			sql:     "",
-			wantErr: false, // Empty SQL returns nil result, not error
-			wantType: "",   // Special case: nil result
+			name:     "empty SQL returns nil",
+			sql:      "",
+			wantErr:  false, // Empty SQL returns nil result, not error
+			wantType: "",    // Special case: nil result
 		},
 		{
 			name:    "invalid SQL",
@@ -287,8 +287,8 @@ func TestParsedSQL_GetLimit(t *testing.T) {
 	parser := NewParser()
 
 	tests := []struct {
-		name        string
-		sql         string
+		name         string
+		sql          string
 		wantHasLimit bool
 	}{
 		{

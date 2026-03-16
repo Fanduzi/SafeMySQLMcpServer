@@ -34,10 +34,10 @@ type Entry struct {
 
 // Logger handles audit logging
 type Logger struct {
-	mu          sync.Mutex
-	writer      *lumberjack.Logger
-	maxSQLLen   int
-	enabled     bool
+	mu        sync.Mutex
+	writer    *lumberjack.Logger
+	maxSQLLen int
+	enabled   bool
 }
 
 // NewLogger creates a new audit logger
@@ -48,7 +48,7 @@ func NewLogger(cfg *config.AuditConfig) (*Logger, error) {
 
 	// Ensure log directory exists
 	logDir := filepath.Dir(cfg.LogFile)
-	if err := os.MkdirAll(logDir, 0o755); err != nil {
+	if err := os.MkdirAll(logDir, 0o750); err != nil {
 		return nil, fmt.Errorf("create log directory: %w", err)
 	}
 
@@ -125,7 +125,7 @@ func (l *Logger) UpdateConfig(cfg *config.AuditConfig) error {
 
 	// Create new writer with updated config
 	logDir := filepath.Dir(cfg.LogFile)
-	if err := os.MkdirAll(logDir, 0o755); err != nil {
+	if err := os.MkdirAll(logDir, 0o750); err != nil {
 		return fmt.Errorf("create log directory: %w", err)
 	}
 

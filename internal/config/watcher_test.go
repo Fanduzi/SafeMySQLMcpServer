@@ -28,7 +28,7 @@ server:
 	defer watcher.Stop()
 
 	if watcher == nil {
-		t.Error("NewWatcher() returned nil")
+		t.Fatal("NewWatcher() returned nil")
 	}
 	if watcher.configPath != configPath {
 		t.Errorf("configPath = %s, want %s", watcher.configPath, configPath)
@@ -140,7 +140,7 @@ func TestReloadableConfig_Get(t *testing.T) {
 	// Test Get()
 	got := rc.Get()
 	if got == nil {
-		t.Error("Get() returned nil")
+		t.Fatal("Get() returned nil")
 	}
 	if got.Server.Port != 8080 {
 		t.Errorf("Get().Server.Port = %d, want 8080", got.Server.Port)
@@ -149,7 +149,7 @@ func TestReloadableConfig_Get(t *testing.T) {
 	// Test GetSecurity()
 	sec := rc.GetSecurity()
 	if sec == nil {
-		t.Error("GetSecurity() returned nil")
+		t.Fatal("GetSecurity() returned nil")
 	}
 	if sec.AutoLimit != 1000 {
 		t.Errorf("GetSecurity().AutoLimit = %d, want 1000", sec.AutoLimit)

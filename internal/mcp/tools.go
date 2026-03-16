@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fan/safe-mysql-mcp/internal/auth"
 	"github.com/fan/safe-mysql-mcp/internal/audit"
+	"github.com/fan/safe-mysql-mcp/internal/auth"
 	"github.com/fan/safe-mysql-mcp/internal/config"
 	"github.com/fan/safe-mysql-mcp/internal/database"
 	"github.com/fan/safe-mysql-mcp/internal/security"
@@ -57,8 +57,8 @@ type ListTablesInput struct {
 
 // ListTablesResult represents the result of list_tables
 type ListTablesResult struct {
-	Tables  []TableInfo `json:"tables"`
-	Truncated bool      `json:"truncated,omitempty"`
+	Tables    []TableInfo `json:"tables"`
+	Truncated bool        `json:"truncated,omitempty"`
 }
 
 // TableInfo represents table information
@@ -558,7 +558,11 @@ func (h *Handler) executeListTables(ctx context.Context, dbName string) (*ListTa
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Printf("close rows for list tables: %v", err)
+		}
+	}()
 
 	var tables []TableInfo
 	count := 0
@@ -609,7 +613,11 @@ func (h *Handler) executeDescribeTable(ctx context.Context, dbName, tableName st
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Printf("close rows for describe table: %v", err)
+		}
+	}()
 
 	var columns []ColumnInfo
 	for rows.Next() {
@@ -683,13 +691,18 @@ func (h *Handler) executeExplain(ctx context.Context, dbName, sqlStr string) (*E
 
 	// SAFE: SQL has been parsed and validated, reconstruct from AST if possible
 	// For now, we use the original SQL since it passed parsing
+	// #nosec G202 -- sqlStr is parsed and restricted to supported statement types above.
 	query := "EXPLAIN " + sqlStr
 
 	rows, err := db.QueryContext(execCtx, query)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			log.Printf("close rows for explain: %v", err)
+		}
+	}()
 
 	// Get column names
 	cols, err := rows.Columns()
@@ -763,26 +776,36 @@ func (h *Handler) executeSearchTables(ctx context.Context, tablePattern string) 
 			break
 		}
 
-		rows, err := db.QueryContext(execCtx, query, dbName, "%"+pattern+"%", remaining+1)
-		if err != nil {
+		if err := func() error {
+			rows, err := db.QueryContext(execCtx, query, dbName, "%"+pattern+"%", remaining+1)
+			if err != nil {
+				return err
+			}
+			defer func() {
+				if err := rows.Close(); err != nil {
+					log.Printf("close rows for search tables: %v", err)
+				}
+			}()
+
+			for rows.Next() {
+				if len(matches) >= maxMatches {
+					truncated = true
+					break
+				}
+				var tableName string
+				if err := rows.Scan(&tableName); err != nil {
+					continue
+				}
+				matches = append(matches, TableMatch{
+					Database: dbName,
+					Table:    tableName,
+				})
+			}
+
+			return rows.Err()
+		}(); err != nil {
 			continue
 		}
-
-		for rows.Next() {
-			if len(matches) >= maxMatches {
-				truncated = true
-				break
-			}
-			var tableName string
-			if err := rows.Scan(&tableName); err != nil {
-				continue
-			}
-			matches = append(matches, TableMatch{
-				Database: dbName,
-				Table:    tableName,
-			})
-		}
-		rows.Close()
 	}
 
 	return &SearchTablesResult{Matches: matches, Truncated: truncated}, nil

@@ -58,13 +58,15 @@
 // # SQL Rewriting
 //
 // The rewriter can automatically modify SQL for safety:
+//
 //   - Adding LIMIT to UPDATE/DELETE without WHERE
+//
 //   - Capping LIMIT values in SELECT statements
 //
-//	rewriter := security.NewRewriter(rules)
-//	rewriteResult := rewriter.Rewrite(parsed)
-//	if rewriteResult.Changed {
-//	    // SQL was modified
-//	    safeSQL := rewriteResult.SQL
-//	}
+//     rewriter := security.NewRewriter(rules)
+//     rewriteResult := rewriter.Rewrite(parsed)
+//     if rewriteResult.Changed {
+//     // SQL was modified
+//     safeSQL := rewriteResult.SQL
+//     }
 package security
