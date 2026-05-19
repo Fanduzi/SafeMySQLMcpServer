@@ -122,6 +122,125 @@ func TestWatcher_Stop(t *testing.T) {
 	watcher.Stop()
 }
 
+func TestWithPollInterval(t *testing.T) {
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "config.yaml")
+	if err := os.WriteFile(configPath, []byte("server:\n  port: 8080"), 0644); err != nil {
+		t.Fatalf("Failed to write config: %v", err)
+	}
+
+	w, err := NewWatcher(configPath, WithPollInterval(5*time.Second))
+	if err != nil {
+		t.Fatalf("NewWatcher with poll: %v", err)
+	}
+	defer w.Stop()
+
+	if w.pollInterval != 5*time.Second {
+		t.Errorf("pollInterval = %v, want 5s", w.pollInterval)
+	}
+}
+
+func TestNewWatcher_NoOptions(t *testing.T) {
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "config.yaml")
+	if err := os.WriteFile(configPath, []byte("server:\n  port: 8080"), 0644); err != nil {
+		t.Fatalf("Failed to write config: %v", err)
+	}
+
+	w, err := NewWatcher(configPath)
+	if err != nil {
+		t.Fatalf("NewWatcher: %v", err)
+	}
+	defer w.Stop()
+
+	if w.pollInterval != 0 {
+		t.Errorf("pollInterval = %v, want 0 (disabled)", w.pollInterval)
+	}
+}
+
+func TestWatcher_Reload(t *testing.T) {
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "config.yaml")
+	if err := os.WriteFile(configPath, []byte("server:\n  port: 8080"), 0644); err != nil {
+		t.Fatalf("Failed to write config: %v", err)
+	}
+
+	var called atomic.Int32
+	w, err := NewWatcher(configPath)
+	if err != nil {
+		t.Fatalf("NewWatcher: %v", err)
+	}
+	defer w.Stop()
+
+	w.OnChange(func(cfg *Config, sec *SecurityConfig) {
+		called.Add(1)
+	})
+
+	os.WriteFile(configPath, []byte("server:\n  port: 9090"), 0644)
+	w.Reload()
+
+	if called.Load() != 1 {
+		t.Errorf("Expected 1 callback, got %d", called.Load())
+	}
+}
+
+func TestWatcher_PollDetectsChange(t *testing.T) {
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "config.yaml")
+	if err := os.WriteFile(configPath, []byte("server:\n  port: 8080"), 0644); err != nil {
+		t.Fatalf("Failed to write config: %v", err)
+	}
+
+	var called atomic.Int32
+	w, err := NewWatcher(configPath, WithPollInterval(200*time.Millisecond))
+	if err != nil {
+		t.Fatalf("NewWatcher: %v", err)
+	}
+	defer w.Stop()
+
+	w.OnChange(func(cfg *Config, sec *SecurityConfig) {
+		called.Add(1)
+	})
+	w.Start()
+
+	// Ensure mtime advances
+	time.Sleep(10 * time.Millisecond)
+	os.WriteFile(configPath, []byte("server:\n  port: 9090"), 0644)
+
+	// Wait for poll to detect
+	time.Sleep(500 * time.Millisecond)
+
+	if called.Load() == 0 {
+		t.Error("Expected callback after mtime change")
+	}
+}
+
+func TestWatcher_CheckMtime_NoChange(t *testing.T) {
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "config.yaml")
+	if err := os.WriteFile(configPath, []byte("server:\n  port: 8080"), 0644); err != nil {
+		t.Fatalf("Failed to write config: %v", err)
+	}
+
+	var called atomic.Int32
+	w, err := NewWatcher(configPath, WithPollInterval(200*time.Millisecond))
+	if err != nil {
+		t.Fatalf("NewWatcher: %v", err)
+	}
+	defer w.Stop()
+
+	w.OnChange(func(cfg *Config, sec *SecurityConfig) {
+		called.Add(1)
+	})
+	w.Start()
+
+	time.Sleep(700 * time.Millisecond)
+
+	if called.Load() != 0 {
+		t.Errorf("Expected 0 callbacks for unchanged file, got %d", called.Load())
+	}
+}
+
 func TestReloadableConfig_Get(t *testing.T) {
 	cfg := &Config{
 		Server: ServerConfig{Port: 8080},

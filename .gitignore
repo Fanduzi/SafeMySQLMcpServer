@@ -29,6 +29,7 @@ vendor/
 # Config files with secrets
 config/local.yaml
 config/*.local.yaml
+.env
 
 # Logs
 *.log
@@ -41,3 +42,4 @@ Thumbs.db
 tmp/
 temp/
 .gitnexus
+/.tool-versions

@@ -35,8 +35,8 @@ COPY --from=builder /app/token /app/token
 COPY --from=builder /app/config /app/config
 
 # Create non-root user
-RUN addgroup -g mysql mysql && \
-    adduser -u mysql -G mysql mysql && \
+RUN addgroup -g 1000 mysql && \
+    adduser -u 1000 -G mysql -D mysql && \
     chown -R mysql:mysql /app
 
 USER mysql
@@ -44,6 +44,7 @@ USER mysql
 # Set environment variables
 ENV JWT_SECRET=""
 ENV CONFIG_PATH=/app/config/config.yaml
+ENV CONFIG_POLL_INTERVAL=""
 
 # Expose port
 EXPOSE 8080
