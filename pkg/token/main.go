@@ -10,16 +10,29 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/fan/safe-mysql-mcp/internal/auth"
 )
 
+// parseDuration extends time.ParseDuration to support "d" (days) suffix.
+func parseDuration(s string) (time.Duration, error) {
+	if strings.HasSuffix(s, "d") {
+		daysStr := strings.TrimSuffix(s, "d")
+		var days int
+		if _, err := fmt.Sscanf(daysStr, "%d", &days); err != nil {
+			return 0, fmt.Errorf("invalid duration: %s", s)
+		}
+		return time.Duration(days) * 24 * time.Hour, nil
+	}
+	return time.ParseDuration(s)
+}
+
 func main() {
-	// Parse command line arguments
 	user := flag.String("user", "", "User ID (required)")
 	email := flag.String("email", "", "User email (required)")
-	expire := flag.Duration("expire", 24*time.Hour, "Token expiration duration (e.g., 24h, 7d, 365d)")
+	expireStr := flag.String("expire", "24h", "Token expiration duration (e.g., 24h, 7d, 365d)")
 	secret := flag.String("secret", "", "JWT secret (required, or set JWT_SECRET env var)")
 	flag.Parse()
 
@@ -38,6 +51,12 @@ func main() {
 
 	// Get secret from flag or environment
 	jwtSecret := *secret
+
+	expire, err := parseDuration(*expireStr)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: invalid --expire value: %v\n", err)
+		os.Exit(1)
+	}
 	if jwtSecret == "" {
 		jwtSecret = os.Getenv("JWT_SECRET")
 	}
@@ -46,11 +65,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Create validator (which can also generate tokens)
 	validator := auth.NewValidator(jwtSecret)
 
-	// Generate token
-	token, err := validator.GenerateToken(*user, *email, *expire)
+	token, err := validator.GenerateToken(*user, *email, expire)
 	if err != nil {
 		log.Fatalf("Failed to generate token: %v", err)
 	}
