@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"time"
 
+	"sync"
+
 	"github.com/fan/safe-mysql-mcp/internal/audit"
 	"github.com/fan/safe-mysql-mcp/internal/auth"
 	"github.com/fan/safe-mysql-mcp/internal/config"
@@ -24,15 +26,16 @@ import (
 
 // Server represents the HTTP server
 type Server struct {
-	cfg         *config.ReloadableConfig
-	validator   *auth.Validator
-	handler     *mcp.Handler
-	audit       *audit.Logger
-	pool        *database.Pool
-	httpSrv     *http.Server
-	mcpServer   *mcpsdk.Server
-	rateLimiter *IPRateLimiter
-	metrics     *metrics.Metrics
+	cfg           *config.ReloadableConfig
+	validator     *auth.Validator
+	handler       *mcp.Handler
+	audit         *audit.Logger
+	pool          *database.Pool
+	httpSrv       *http.Server
+	mcpServer     *mcpsdk.Server
+	rateLimiter   *IPRateLimiter
+	metrics       *metrics.Metrics
+	registerTools sync.Once
 }
 
 // New creates a new server
@@ -91,41 +94,43 @@ func New(cfg *config.ReloadableConfig) (*Server, error) {
 	}, nil
 }
 
-// Start starts the HTTP server
-func (s *Server) Start() error {
-	cfg := s.cfg.Get()
+// Handler returns the HTTP handler with the full middleware chain.
+// Can be used with httptest.NewServer for testing.
+func (s *Server) Handler() http.Handler {
+	s.registerTools.Do(func() {
+		mcp.RegisterTools(s.mcpServer, s.handler)
+	})
 
-	// Register tools with the MCP server
-	mcp.RegisterTools(s.mcpServer, s.handler)
-
-	// Create MCP HTTP handler using SDK
 	mcpHandler := mcpsdk.NewStreamableHTTPHandler(func(r *http.Request) *mcpsdk.Server {
 		return s.mcpServer
 	}, nil)
 
-	// Create HTTP mux
 	mux := http.NewServeMux()
 
-	// Register MCP endpoint with rate limiting and auth middleware
 	authHandler := s.authMiddleware(mcpHandler)
 	rateLimitedMCP := s.rateLimitMiddleware(s.rateLimiter, authHandler)
 	metricsMCP := s.metricsMiddleware("/mcp", rateLimitedMCP)
 	mux.Handle("/mcp", metricsMCP)
 
-	// Health check endpoint with rate limiting (no auth required)
 	healthHandler := http.HandlerFunc(s.handleHealth)
 	rateLimitedHealth := s.rateLimitMiddleware(s.rateLimiter, healthHandler)
 	metricsHealth := s.metricsMiddleware("/health", rateLimitedHealth)
 	mux.Handle("/health", metricsHealth)
 
-	// Metrics endpoint (no auth required, for Prometheus scraping)
 	mux.Handle("/metrics", s.metrics.Handler())
 
-	// Create HTTP server
+	return mux
+}
+
+// Start starts the HTTP server
+func (s *Server) Start() error {
+	cfg := s.cfg.Get()
+	handler := s.Handler()
+
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
 	s.httpSrv = &http.Server{
 		Addr:         addr,
-		Handler:      mux,
+		Handler:      handler,
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 60 * time.Second,
 		IdleTimeout:  120 * time.Second,
