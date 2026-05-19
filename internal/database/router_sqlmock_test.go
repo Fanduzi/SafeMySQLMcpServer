@@ -82,9 +82,11 @@ func TestRouter_Query_UseDBError(t *testing.T) {
 	mock.ExpectExec("USE `testdb`").WillReturnError(errors.New("unknown database"))
 
 	rows, err := router.Query(context.Background(), "testdb", "SELECT 1")
-	if rows != nil {
-		_ = rows.Close()
-	}
+	defer func() {
+		if rows != nil {
+			_ = rows.Close()
+		}
+	}()
 	if err == nil {
 		t.Fatal("expected error when USE fails")
 	}
@@ -102,9 +104,11 @@ func TestRouter_Query_QueryError(t *testing.T) {
 	mock.ExpectQuery("SELECT 1").WillReturnError(errors.New("syntax error"))
 
 	rows, err := router.Query(context.Background(), "testdb", "SELECT 1")
-	if rows != nil {
-		_ = rows.Close()
-	}
+	defer func() {
+		if rows != nil {
+			_ = rows.Close()
+		}
+	}()
 	if err == nil {
 		t.Fatal("expected error when query fails")
 	}
@@ -119,9 +123,11 @@ func TestRouter_Query_UnknownDatabase(t *testing.T) {
 	defer cleanup()
 
 	rows, err := router.Query(context.Background(), "nonexistent", "SELECT 1")
-	if rows != nil {
-		_ = rows.Close()
-	}
+	defer func() {
+		if rows != nil {
+			_ = rows.Close()
+		}
+	}()
 	if err == nil {
 		t.Fatal("expected error for unknown database")
 	}
@@ -136,9 +142,11 @@ func TestRouter_Query_CancelledContext(t *testing.T) {
 
 	// Context is already cancelled, Conn() should fail
 	rows, err := router.Query(ctx, "testdb", "SELECT 1")
-	if rows != nil {
-		_ = rows.Close()
-	}
+	defer func() {
+		if rows != nil {
+			_ = rows.Close()
+		}
+	}()
 	if err == nil {
 		t.Fatal("expected error with cancelled context")
 	}
@@ -227,7 +235,7 @@ func TestRouter_Query_SpecialCharsInDBName(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Query() error = %v", err)
 	}
-	_ = rows.Close()
+	defer func() { _ = rows.Close() }()
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("unfulfilled expectations: %v", err)
 	}
