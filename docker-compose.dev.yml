@@ -1,0 +1,39 @@
+# Development override — used with: make dev
+# This file adds a local MySQL container for development/testing.
+# Do NOT use this file in production.
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: safemysql-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-testdb}
+      MYSQL_USER: ${MYSQL_USER:-testuser}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-testpassword}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - safemysql-network
+
+  app:
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      CONFIG_POLL_INTERVAL: ${CONFIG_POLL_INTERVAL:-30s}
+
+volumes:
+  mysql_data:
+
+networks:
+  safemysql-network:
+    driver: bridge

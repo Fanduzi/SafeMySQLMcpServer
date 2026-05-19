@@ -31,12 +31,16 @@ RUN apk add --no-cache mysql-client
 COPY --from=builder /app/server /app/server
 COPY --from=builder /app/token /app/token
 
+# Copy entrypoint script
+COPY scripts/docker-entrypoint.sh /app/docker-entrypoint.sh
+
 # Copy config files
 COPY --from=builder /app/config /app/config
 
 # Create non-root user
 RUN addgroup -g 1000 mysql && \
     adduser -u 1000 -G mysql -D mysql && \
+    chmod +x /app/docker-entrypoint.sh && \
     chown -R mysql:mysql /app
 
 USER mysql
@@ -53,5 +57,5 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
     CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
 
-# Run the server
-ENTRYPOINT ["/app/server", "-config", "/app/config/config.yaml"]
+# Run the server with validation
+ENTRYPOINT ["/app/docker-entrypoint.sh"]

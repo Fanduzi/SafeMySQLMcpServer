@@ -1,50 +1,32 @@
-version: '3.8'
+# SafeMySQLMcpServer — Production Docker Compose
+#
+# Quick start:
+#   1. make init          # Interactive setup, generates .env + config.yaml
+#   2. make deploy        # Build and start
+#
+# Or manual:
+#   1. cp .env.example .env && edit .env
+#   2. edit config/config.yaml with your MySQL connection
+#   3. docker compose up -d --build
 
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: safemysql-mysql
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-testdb}
-      MYSQL_USER: ${MYSQL_USER:-testuser}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-testpassword}
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - safemysql-network
-
   app:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: safemysql-app
     ports:
-      - "8080:8080"
+      - "${APP_PORT:-8080}:8080"
     environment:
-      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required. Run 'make init' to configure.}
       CONFIG_PATH: /app/config/config.yaml
       CONFIG_POLL_INTERVAL: ${CONFIG_POLL_INTERVAL:-30s}
-    depends_on:
-      mysql:
-        condition: service_healthy
     volumes:
       - ./config:/app/config:ro
-    networks:
-      - safemysql-network
+      - ./logs:/app/logs
     restart: unless-stopped
-
-volumes:
-  mysql_data:
-
-networks:
-  safemysql-network:
-    driver: bridge
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
