@@ -86,7 +86,7 @@ func TestAuthMiddleware_ValidToken(t *testing.T) {
 
 	handler := srv.authMiddleware(next)
 
-	req := httptest.NewRequest("POST", "/mcp", nil)
+	req := httptest.NewRequest("POST", "/mcp", http.NoBody)
 	req.Header.Set("Authorization", "Bearer "+token)
 	rec := httptest.NewRecorder()
 
@@ -109,7 +109,7 @@ func TestAuthMiddleware_MissingToken(t *testing.T) {
 
 	handler := srv.authMiddleware(next)
 
-	req := httptest.NewRequest("POST", "/mcp", nil)
+	req := httptest.NewRequest("POST", "/mcp", http.NoBody)
 	rec := httptest.NewRecorder()
 
 	handler.ServeHTTP(rec, req)
@@ -128,7 +128,7 @@ func TestAuthMiddleware_InvalidToken(t *testing.T) {
 
 	handler := srv.authMiddleware(next)
 
-	req := httptest.NewRequest("POST", "/mcp", nil)
+	req := httptest.NewRequest("POST", "/mcp", http.NoBody)
 	req.Header.Set("Authorization", "Bearer invalid-token")
 	rec := httptest.NewRecorder()
 
@@ -149,7 +149,7 @@ func TestRateLimitMiddleware_AllowsRequests(t *testing.T) {
 	handler := srv.rateLimitMiddleware(srv.rateLimiter, next)
 
 	for i := 0; i < 10; i++ {
-		req := httptest.NewRequest("GET", "/health", nil)
+		req := httptest.NewRequest("GET", "/health", http.NoBody)
 		req.RemoteAddr = "192.168.1.1:1234"
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
@@ -163,7 +163,7 @@ func TestRateLimitMiddleware_AllowsRequests(t *testing.T) {
 func TestHandleHealth(t *testing.T) {
 	srv, _ := newTestServer(t)
 
-	req := httptest.NewRequest("GET", "/health", nil)
+	req := httptest.NewRequest("GET", "/health", http.NoBody)
 	rec := httptest.NewRecorder()
 
 	srv.handleHealth(rec, req)

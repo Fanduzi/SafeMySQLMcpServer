@@ -46,7 +46,7 @@ func newExecuteTestHandler(t *testing.T, dbName string) (*Handler, sqlmock.Sqlmo
 	reloadCfg.Update(&config.Config{}, &config.SecurityConfig{Security: *securityRules})
 
 	handler := NewHandler(router, parser, checker, rewriter, auditLogger, reloadCfg)
-	cleanup := func() { db.Close() }
+	cleanup := func() { _ = db.Close() }
 
 	return handler, mock, cleanup
 }
@@ -290,7 +290,7 @@ func TestHandler_HandleExplainTool_ValidationError(t *testing.T) {
 }
 
 func contains(s, sub string) bool {
-	return len(s) >= len(sub) && (s == sub || len(sub) == 0 || searchSubstring(s, sub))
+	return len(s) >= len(sub) && (s == sub || sub == "" || searchSubstring(s, sub))
 }
 
 func searchSubstring(s, sub string) bool {
