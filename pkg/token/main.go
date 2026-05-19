@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -20,11 +21,11 @@ import (
 func parseDuration(s string) (time.Duration, error) {
 	if strings.HasSuffix(s, "d") {
 		daysStr := strings.TrimSuffix(s, "d")
-		var days int
-		if _, err := fmt.Sscanf(daysStr, "%d", &days); err != nil {
+		days, err := strconv.ParseFloat(daysStr, 64)
+		if err != nil {
 			return 0, fmt.Errorf("invalid duration: %s", s)
 		}
-		return time.Duration(days) * 24 * time.Hour, nil
+		return time.Duration(days * 24 * float64(time.Hour)), nil
 	}
 	return time.ParseDuration(s)
 }

@@ -270,3 +270,47 @@ func isBase64URL(c rune) bool {
 		(c >= '0' && c <= '9') ||
 		c == '-' || c == '_' || c == '='
 }
+
+func TestParseDuration(t *testing.T) {
+	tests := []struct {
+		input   string
+		want    time.Duration
+		wantErr bool
+	}{
+		// Day suffix
+		{"1d", 24 * time.Hour, false},
+		{"7d", 7 * 24 * time.Hour, false},
+		{"365d", 365 * 24 * time.Hour, false},
+		{"0d", 0, false},
+
+		// Standard Go durations
+		{"1h", time.Hour, false},
+		{"30m", 30 * time.Minute, false},
+		{"90s", 90 * time.Second, false},
+		{"500ms", 500 * time.Millisecond, false},
+		{"1h30m", 90 * time.Minute, false},
+		{"24h", 24 * time.Hour, false},
+
+		// Edge cases
+		{"-1d", -24 * time.Hour, false},
+		{"1.5d", 36 * time.Hour, false},
+
+		// Invalid
+		{"abc", 0, true},
+		{"", 0, true},
+		{"d", 0, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got, err := parseDuration(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("parseDuration(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr && got != tt.want {
+				t.Errorf("parseDuration(%q) = %v, want %v", tt.input, got, tt.want)
+			}
+		})
+	}
+}

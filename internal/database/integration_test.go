@@ -245,6 +245,69 @@ func getEnvInt(key string, defaultVal int) int {
 	return defaultVal
 }
 
+// TestIntegrationDatabaseSwitching verifies that Router.Query correctly switches
+// to the target database before executing queries. This is a regression test for
+// the bug where DATABASE() returned NULL because USE was never executed.
+func TestIntegrationDatabaseSwitching(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	if os.Getenv("MYSQL_HOST") == "" {
+		t.Skip("MYSQL_HOST not set, skipping integration test")
+	}
+
+	clusters := config.ClustersConfig{
+		"primary": {
+			Host:            os.Getenv("MYSQL_HOST"),
+			Port:            getEnvInt("MYSQL_PORT", 3306),
+			Username:        os.Getenv("MYSQL_USER"),
+			Password:        os.Getenv("MYSQL_PASSWORD"),
+			MaxOpenConns:    5,
+			MaxIdleConns:    2,
+			ConnMaxLifetime: 5 * time.Minute,
+		},
+	}
+
+	pool, err := NewPool(clusters)
+	if err != nil {
+		t.Fatalf("NewPool() error = %v", err)
+	}
+	defer pool.Close()
+
+	dbName := os.Getenv("MYSQL_DATABASE")
+	if dbName == "" {
+		dbName = "testdb"
+	}
+
+	databases := config.DatabasesConfig{
+		dbName: {Cluster: "primary"},
+	}
+
+	router := NewRouter(pool, databases)
+	ctx := context.Background()
+
+	// Verify Router.Query switches to the correct database
+	rows, err := router.Query(ctx, dbName, "SELECT DATABASE()")
+	if err != nil {
+		t.Fatalf("Query DATABASE() error = %v", err)
+	}
+	defer rows.Close()
+
+	if !rows.Next() {
+		t.Fatal("expected one row from DATABASE()")
+	}
+
+	var currentDB string
+	if err := rows.Scan(&currentDB); err != nil {
+		t.Fatalf("Scan error = %v", err)
+	}
+
+	if currentDB != dbName {
+		t.Errorf("DATABASE() = %q, want %q — USE not executed correctly", currentDB, dbName)
+	}
+}
+
 // TestConnectionTest tests basic MySQL connectivity
 func TestConnectionTest(t *testing.T) {
 	if testing.Short() {
