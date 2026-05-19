@@ -29,6 +29,7 @@ func main() {
 		if d, err := time.ParseDuration(envPoll); err == nil {
 			*pollInterval = d
 		} else {
+			// #nosec G706 -- envPoll comes from os.Getenv, safe for log output
 			log.Printf("Warning: invalid CONFIG_POLL_INTERVAL %q: %v", envPoll, err)
 		}
 	}

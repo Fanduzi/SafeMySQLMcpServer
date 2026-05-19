@@ -96,13 +96,13 @@ func (r *Router) Query(ctx context.Context, database, query string, args ...inte
 	}
 
 	if err := useDB(ctx, conn, database); err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, err
 	}
 
 	rows, err := conn.QueryContext(ctx, query, args...)
 	if err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, err
 	}
 	// rows.Close() releases the conn back to pool
@@ -120,7 +120,7 @@ func (r *Router) Exec(ctx context.Context, database, query string, args ...inter
 	if err != nil {
 		return nil, fmt.Errorf("get connection: %w", err)
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	if err := useDB(ctx, conn, database); err != nil {
 		return nil, err

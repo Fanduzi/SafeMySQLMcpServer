@@ -176,7 +176,9 @@ func TestWatcher_Reload(t *testing.T) {
 		called.Add(1)
 	})
 
-	os.WriteFile(configPath, []byte("server:\n  port: 9090"), 0644)
+	if err := os.WriteFile(configPath, []byte("server:\n  port: 9090"), 0644); err != nil {
+		t.Fatalf("Failed to update config: %v", err)
+	}
 	w.Reload()
 
 	if called.Load() != 1 {
@@ -205,7 +207,9 @@ func TestWatcher_PollDetectsChange(t *testing.T) {
 
 	// Ensure mtime advances
 	time.Sleep(10 * time.Millisecond)
-	os.WriteFile(configPath, []byte("server:\n  port: 9090"), 0644)
+	if err := os.WriteFile(configPath, []byte("server:\n  port: 9090"), 0644); err != nil {
+		t.Fatalf("Failed to update config: %v", err)
+	}
 
 	// Wait for poll to detect
 	time.Sleep(500 * time.Millisecond)
