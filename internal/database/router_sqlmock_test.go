@@ -33,7 +33,7 @@ func newMockRouter(t *testing.T, dbName string) (*Router, sqlmock.Sqlmock, func(
 	}
 
 	router := NewRouter(pool, databases)
-	cleanup := func() { db.Close() }
+	cleanup := func() { _ = db.Close() }
 
 	return router, mock, cleanup
 }
@@ -54,7 +54,7 @@ func TestRouter_Query_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Query() error = %v", err)
 	}
-	defer result.Close()
+	defer func() { _ = result.Close() }()
 
 	var id int
 	var name string
@@ -81,7 +81,10 @@ func TestRouter_Query_UseDBError(t *testing.T) {
 	// USE fails → conn should be closed
 	mock.ExpectExec("USE `testdb`").WillReturnError(errors.New("unknown database"))
 
-	_, err := router.Query(context.Background(), "testdb", "SELECT 1")
+	rows, err := router.Query(context.Background(), "testdb", "SELECT 1")
+	if rows != nil {
+		_ = rows.Close()
+	}
 	if err == nil {
 		t.Fatal("expected error when USE fails")
 	}
@@ -98,7 +101,10 @@ func TestRouter_Query_QueryError(t *testing.T) {
 	mock.ExpectExec("USE `testdb`").WillReturnResult(sqlmock.NewResult(0, 0))
 	mock.ExpectQuery("SELECT 1").WillReturnError(errors.New("syntax error"))
 
-	_, err := router.Query(context.Background(), "testdb", "SELECT 1")
+	rows, err := router.Query(context.Background(), "testdb", "SELECT 1")
+	if rows != nil {
+		_ = rows.Close()
+	}
 	if err == nil {
 		t.Fatal("expected error when query fails")
 	}
@@ -112,7 +118,10 @@ func TestRouter_Query_UnknownDatabase(t *testing.T) {
 	router, _, cleanup := newMockRouter(t, "testdb")
 	defer cleanup()
 
-	_, err := router.Query(context.Background(), "nonexistent", "SELECT 1")
+	rows, err := router.Query(context.Background(), "nonexistent", "SELECT 1")
+	if rows != nil {
+		_ = rows.Close()
+	}
 	if err == nil {
 		t.Fatal("expected error for unknown database")
 	}
@@ -126,7 +135,10 @@ func TestRouter_Query_CancelledContext(t *testing.T) {
 	cancel()
 
 	// Context is already cancelled, Conn() should fail
-	_, err := router.Query(ctx, "testdb", "SELECT 1")
+	rows, err := router.Query(ctx, "testdb", "SELECT 1")
+	if rows != nil {
+		_ = rows.Close()
+	}
 	if err == nil {
 		t.Fatal("expected error with cancelled context")
 	}
@@ -215,8 +227,7 @@ func TestRouter_Query_SpecialCharsInDBName(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Query() error = %v", err)
 	}
-	rows.Close()
-
+	_ = rows.Close()
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("unfulfilled expectations: %v", err)
 	}

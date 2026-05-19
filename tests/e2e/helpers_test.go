@@ -16,6 +16,7 @@ import (
 	"github.com/fan/safe-mysql-mcp/internal/config"
 	"github.com/fan/safe-mysql-mcp/internal/server"
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
+	_ "github.com/pingcap/tidb/parser/test_driver"
 )
 
 const testJWTSecret = "e2e-test-secret-key-at-least-32-chars"
