@@ -102,40 +102,29 @@ func (p *Pool) release(db *sql.DB) {
 
 // UpdateConfig updates the pool configuration with graceful connection handling
 func (p *Pool) UpdateConfig(clusters config.ClustersConfig) error {
+	// Phase 1: snapshot current state and mark connections for closing
 	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	// Track clusters to close
-	toClose := make(map[string]bool)
-	for name := range p.clusters {
-		if _, ok := clusters[name]; !ok {
-			toClose[name] = true
-		}
-	}
-
-	// Mark all existing connections for graceful close
+	toClose := make(map[string]*managedDB)
 	for name, mdb := range p.clusters {
-		if toClose[name] {
-			// Mark for closing - no new references allowed
+		newCfg, exists := clusters[name]
+		if !exists {
+			// Cluster removed
 			atomic.StoreInt32(&mdb.closing, 1)
+			toClose[name] = mdb
+			continue
+		}
+		// Check if config changed
+		oldCfg := p.configs[name]
+		if oldCfg.Host != newCfg.Host || oldCfg.Port != newCfg.Port ||
+			oldCfg.Username != newCfg.Username || oldCfg.Password != newCfg.Password {
+			atomic.StoreInt32(&mdb.closing, 1)
+			toClose[name] = mdb
 		}
 	}
 
-	// Create or update connections
+	// Add new clusters
 	for name, cfg := range clusters {
-		mdb, exists := p.clusters[name]
-
-		if exists {
-			// Check if config changed
-			oldCfg := p.configs[name]
-			if oldCfg.Host != cfg.Host || oldCfg.Port != cfg.Port ||
-				oldCfg.Username != cfg.Username || oldCfg.Password != cfg.Password {
-				// Config changed, need to reconnect
-				atomic.StoreInt32(&mdb.closing, 1)
-				toClose[name] = true
-			}
-		} else {
-			// New cluster
+		if _, exists := p.clusters[name]; !exists {
 			db, err := p.connect(cfg)
 			if err != nil {
 				log.Printf("Failed to connect to cluster %s: %v", name, err)
@@ -145,54 +134,40 @@ func (p *Pool) UpdateConfig(clusters config.ClustersConfig) error {
 		}
 	}
 
-	// Wait for connections to be released (with timeout)
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	p.configs = clusters
+	p.mu.Unlock()
+
+	// Phase 2: wait for old connections to be released, then close them
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	for {
+	for name, mdb := range toClose {
+		if !p.waitForRelease(ctx, mdb) {
+			log.Printf("Timeout waiting for cluster %s connections, forcing close", name)
+		}
+		if err := mdb.db.Close(); err != nil {
+			log.Printf("Error closing cluster %s: %v", name, err)
+		}
 		p.mu.Lock()
-		for name, mdb := range p.clusters {
-			if atomic.LoadInt32(&mdb.refCount) == 0 && atomic.LoadInt32(&mdb.closing) == 1 {
-				if err := mdb.db.Close(); err != nil {
-					log.Printf("Error closing cluster %s: %v", name, err)
-				}
-				delete(p.clusters, name)
-			}
-		}
+		delete(p.clusters, name)
 		p.mu.Unlock()
-
-		// Check if all marked connections are closed
-		allClosed := true
-		for name := range toClose {
-			if _, ok := p.clusters[name]; ok {
-				allClosed = false
-				break
-			}
-		}
-		if allClosed {
-			break
-		}
-
-		select {
-		case <-ctx.Done():
-			log.Printf("Timeout waiting for connections to close, forcing close")
-			p.mu.Lock()
-			for name := range toClose {
-				if mdb, ok := p.clusters[name]; ok {
-					if err := mdb.db.Close(); err != nil {
-						log.Printf("Error force-closing cluster %s: %v", name, err)
-					}
-					delete(p.clusters, name)
-				}
-			}
-			p.mu.Unlock()
-			return nil
-		case <-time.After(100 * time.Millisecond):
-		}
 	}
 
-	p.configs = clusters
 	return nil
+}
+
+// waitForRelease waits until a managedDB has zero references or ctx expires.
+func (p *Pool) waitForRelease(ctx context.Context, mdb *managedDB) bool {
+	for {
+		if atomic.LoadInt32(&mdb.refCount) == 0 {
+			return true
+		}
+		select {
+		case <-ctx.Done():
+			return false
+		case <-time.After(50 * time.Millisecond):
+		}
+	}
 }
 
 // Close closes all database connections
