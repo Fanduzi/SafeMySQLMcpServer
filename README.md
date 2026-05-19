@@ -22,51 +22,42 @@ A secure MySQL MCP (Model Context Protocol) Server that allows AI tools like Cla
 ### Using Docker (Recommended)
 
 ```bash
-# Start with docker-compose (includes MySQL)
-docker-compose up -d
+# 1. Interactive setup — generates .env and config/config.yaml
+make init
 
-# Generate a token
-docker exec safemysql-app /app/token -user admin -email admin@example.com -secret your-jwt-secret
+# 2. Build and start
+make deploy
 
-# Check health
+# 3. Generate a token
+make token
+
+# 4. Check health
 curl http://localhost:8080/health
+```
+
+Or manual:
+
+```bash
+cp .env.example .env          # Edit .env, set JWT_SECRET
+vim config/config.yaml        # Configure your MySQL connection
+docker compose up -d --build
+```
+
+### Development Environment
+
+```bash
+# Start app + local MySQL with test data
+make dev
 ```
 
 ### Manual Setup
 
-#### 1. Build
-
 ```bash
+# Build
 make build
-```
 
-#### 2. Configure
-
-Copy and edit configuration files:
-
-```bash
-cp config/config.yaml.example config/config.yaml
-cp config/security.yaml.example config/security.yaml
-```
-
-Set environment variables:
-
-```bash
-export JWT_SECRET=your-secret-key-min-32-characters
-export DEV_DB_USER=your-db-user
-export DEV_DB_PASSWORD=your-db-password
-```
-
-#### 3. Generate Token
-
-```bash
-./bin/mysql-mcp-token --user zhangsan --email zhangsan@company.com --expire 365d
-```
-
-#### 4. Run Server
-
-```bash
-./bin/safe-mysql-mcp -config config/config.yaml
+# Run locally (requires config/config.yaml)
+make run
 ```
 
 ## API Endpoints
@@ -234,14 +225,17 @@ golangci-lint run
 ### Docker Development
 
 ```bash
-# Build and run with MySQL
-docker-compose up -d
+# Development (app + MySQL with test data)
+make dev
+
+# Production (app only, uses your MySQL)
+make deploy
 
 # View logs
-docker-compose logs -f app
+make logs
 
-# Stop services
-docker-compose down
+# Stop
+make stop
 ```
 
 ### CI/CD
@@ -286,7 +280,7 @@ SafeMySQLMcpServer provides secure MySQL access through MCP protocol with SQL in
 │                              Security Layer                                  │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
 │  │ SQL Parser  │→ │ Security    │→ │ SQL Rewriter│→ │ Input Validator     │ │
-│  │ (vitess)    │  │ Checker     │  │ (auto-LIMIT)│  │ (identifier regex)  │ │
+│  │ (TiDB)      │  │ Checker     │  │ (auto-LIMIT)│  │ (identifier regex)  │ │
 │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────────────┘ │
 │                                                              │               │
 │  Security Rules:                                             │               │
@@ -369,7 +363,7 @@ SafeMySQLMcpServer provides secure MySQL access through MCP protocol with SQL in
 4. MCP Handler:
    a. Validate database name: "mydb" → regex check
    b. Validate SQL: "SELECT * FROM users" → length check
-   c. Parse SQL: vitess parser → AST
+   c. Parse SQL: TiDB parser → AST
    d. Security check: SELECT is allowed? → Yes
    e. Get database connection from router
    f. Execute query with timeout
