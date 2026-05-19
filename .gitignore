@@ -41,5 +41,7 @@ Thumbs.db
 # Temporary files
 tmp/
 temp/
+*.bak
+*.mut
 .gitnexus
 /.tool-versions

@@ -209,9 +209,7 @@ func TestPool_DoubleClose(t *testing.T) {
 	}
 }
 
-// Note: UpdateConfig tests are skipped because the function has a blocking loop
-// that waits for connections to close with a 30s timeout.
-// These are better tested via integration tests with real database connections.
+// Note: UpdateConfig deadlock regression tests are in pool_update_test.go.
 
 func TestClusterConfig_Defaults(t *testing.T) {
 	cfg := config.ClusterConfig{
