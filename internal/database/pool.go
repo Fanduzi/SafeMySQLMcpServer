@@ -170,6 +170,16 @@ func (p *Pool) waitForRelease(ctx context.Context, mdb *managedDB) bool {
 	}
 }
 
+// NewTestPool creates a Pool with a pre-configured DB for testing.
+func NewTestPool(cluster string, db *sql.DB) *Pool {
+	return &Pool{
+		clusters: map[string]*managedDB{
+			cluster: {db: db},
+		},
+		configs: make(config.ClustersConfig),
+	}
+}
+
 // Close closes all database connections
 func (p *Pool) Close() error {
 	p.mu.Lock()
