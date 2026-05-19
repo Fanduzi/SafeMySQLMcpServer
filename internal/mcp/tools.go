@@ -549,12 +549,12 @@ func (h *Handler) executeListTables(ctx context.Context, dbName string) (*ListTa
 	query := `
 		SELECT TABLE_NAME, TABLE_COMMENT
 		FROM INFORMATION_SCHEMA.TABLES
-		WHERE TABLE_SCHEMA = DATABASE()
+		WHERE TABLE_SCHEMA = ?
 		ORDER BY TABLE_NAME
 		LIMIT ?
 	`
 
-	rows, err := db.QueryContext(execCtx, query, maxTables+1)
+	rows, err := db.QueryContext(execCtx, query, dbName, maxTables+1)
 	if err != nil {
 		return nil, err
 	}
@@ -605,11 +605,11 @@ func (h *Handler) executeDescribeTable(ctx context.Context, dbName, tableName st
 			EXTRA as Extra,
 			COLUMN_COMMENT as Comment
 		FROM INFORMATION_SCHEMA.COLUMNS
-		WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?
+		WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
 		ORDER BY ORDINAL_POSITION
 	`
 
-	rows, err := db.QueryContext(execCtx, query, tableName)
+	rows, err := db.QueryContext(execCtx, query, dbName, tableName)
 	if err != nil {
 		return nil, err
 	}
@@ -651,8 +651,9 @@ func (h *Handler) executeShowCreateTable(ctx context.Context, dbName, tableName 
 	defer cancel()
 
 	// SAFE: Table name is already validated by handler, use quoted identifier
+	quotedDB := validation.QuoteIdentifier(dbName)
 	quotedTable := validation.QuoteIdentifier(tableName)
-	query := fmt.Sprintf("SHOW CREATE TABLE %s", quotedTable)
+	query := fmt.Sprintf("SHOW CREATE TABLE %s.%s", quotedDB, quotedTable)
 
 	var tblName, createStmt string
 	err = db.QueryRowContext(execCtx, query).Scan(&tblName, &createStmt)
@@ -666,11 +667,6 @@ func (h *Handler) executeShowCreateTable(ctx context.Context, dbName, tableName 
 // executeExplain explains a SQL statement
 // FIXED: Parse and validate the SQL before using in EXPLAIN
 func (h *Handler) executeExplain(ctx context.Context, dbName, sqlStr string) (*ExplainResult, error) {
-	db, err := h.router.GetDB(dbName)
-	if err != nil {
-		return nil, err
-	}
-
 	// Parse the SQL to ensure it's valid and safe
 	parsed, err := h.parser.Parse(sqlStr)
 	if err != nil {
@@ -694,7 +690,7 @@ func (h *Handler) executeExplain(ctx context.Context, dbName, sqlStr string) (*E
 	// #nosec G202 -- sqlStr is parsed and restricted to supported statement types above.
 	query := "EXPLAIN " + sqlStr
 
-	rows, err := db.QueryContext(execCtx, query)
+	rows, err := h.router.Query(execCtx, dbName, query)
 	if err != nil {
 		return nil, err
 	}

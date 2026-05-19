@@ -74,6 +74,15 @@ func (r *Router) ListDatabases() []string {
 	return databases
 }
 
+// useDB switches the connection to the specified database
+func useDB(ctx context.Context, conn *sql.Conn, database string) error {
+	_, err := conn.ExecContext(ctx, fmt.Sprintf("USE `%s`", database))
+	if err != nil {
+		return fmt.Errorf("switch to database %s: %w", database, err)
+	}
+	return nil
+}
+
 // Query executes a query on the specified database
 func (r *Router) Query(ctx context.Context, database, query string, args ...interface{}) (*sql.Rows, error) {
 	db, err := r.GetDB(database)
@@ -81,7 +90,23 @@ func (r *Router) Query(ctx context.Context, database, query string, args ...inte
 		return nil, err
 	}
 
-	return db.QueryContext(ctx, query, args...)
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get connection: %w", err)
+	}
+
+	if err := useDB(ctx, conn, database); err != nil {
+		conn.Close()
+		return nil, err
+	}
+
+	rows, err := conn.QueryContext(ctx, query, args...)
+	if err != nil {
+		conn.Close()
+		return nil, err
+	}
+	// rows.Close() releases the conn back to pool
+	return rows, nil
 }
 
 // Exec executes a statement on the specified database
@@ -91,5 +116,15 @@ func (r *Router) Exec(ctx context.Context, database, query string, args ...inter
 		return nil, err
 	}
 
-	return db.ExecContext(ctx, query, args...)
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get connection: %w", err)
+	}
+	defer conn.Close()
+
+	if err := useDB(ctx, conn, database); err != nil {
+		return nil, err
+	}
+
+	return conn.ExecContext(ctx, query, args...)
 }
