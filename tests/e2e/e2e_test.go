@@ -236,6 +236,149 @@ func TestMCP_Explain(t *testing.T) {
 	}
 }
 
+// TestMCP_ShowCreateTable verifies show_create_table returns CREATE TABLE DDL.
+func TestMCP_ShowCreateTable(t *testing.T) {
+	env := setupE2E(t)
+	defer env.cleanup()
+
+	dbName := envOr("MYSQL_DATABASE", "testdb")
+	setupTestTable(t, dbName)
+
+	result, err := env.session.CallTool(context.Background(), &mcpsdk.CallToolParams{
+		Name: "show_create_table",
+		Arguments: map[string]any{
+			"database": dbName,
+			"table":    "e2e_test",
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool show_create_table: %v", err)
+	}
+
+	if result.IsError {
+		t.Fatalf("show_create_table returned error: %v", result.Content)
+	}
+
+	found := false
+	for _, content := range result.Content {
+		if text, ok := content.(*mcpsdk.TextContent); ok {
+			if strings.Contains(text.Text, "CREATE TABLE") {
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Errorf("show_create_table result should contain 'CREATE TABLE', got: %v", result.Content)
+	}
+}
+
+// TestMCP_SearchTables verifies search_tables finds tables by name pattern.
+func TestMCP_SearchTables(t *testing.T) {
+	env := setupE2E(t)
+	defer env.cleanup()
+
+	dbName := envOr("MYSQL_DATABASE", "testdb")
+	setupTestTable(t, dbName)
+
+	result, err := env.session.CallTool(context.Background(), &mcpsdk.CallToolParams{
+		Name: "search_tables",
+		Arguments: map[string]any{
+			"table_pattern": "e2e",
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool search_tables: %v", err)
+	}
+
+	if result.IsError {
+		t.Fatalf("search_tables returned error: %v", result.Content)
+	}
+
+	found := false
+	for _, content := range result.Content {
+		if text, ok := content.(*mcpsdk.TextContent); ok {
+			if strings.Contains(text.Text, "e2e_test") {
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Errorf("search_tables should find 'e2e_test', got: %v", result.Content)
+	}
+}
+
+// TestMCP_Query_Insert verifies INSERT + SELECT round-trip through the full chain.
+func TestMCP_Query_Insert(t *testing.T) {
+	env := setupE2E(t)
+	defer env.cleanup()
+
+	dbName := envOr("MYSQL_DATABASE", "testdb")
+	setupTestTable(t, dbName)
+
+	// INSERT a row
+	insResult, err := env.session.CallTool(context.Background(), &mcpsdk.CallToolParams{
+		Name: "query",
+		Arguments: map[string]any{
+			"database": dbName,
+			"sql":      "INSERT INTO e2e_test (name) VALUES ('e2e-insert-test')",
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool query (INSERT): %v", err)
+	}
+	if insResult.IsError {
+		t.Fatalf("INSERT returned error: %v", insResult.Content)
+	}
+
+	// SELECT it back
+	selResult, err := env.session.CallTool(context.Background(), &mcpsdk.CallToolParams{
+		Name: "query",
+		Arguments: map[string]any{
+			"database": dbName,
+			"sql":      "SELECT name FROM e2e_test WHERE name = 'e2e-insert-test'",
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool query (SELECT): %v", err)
+	}
+	if selResult.IsError {
+		t.Fatalf("SELECT returned error: %v", selResult.Content)
+	}
+
+	found := false
+	for _, content := range selResult.Content {
+		if text, ok := content.(*mcpsdk.TextContent); ok {
+			if strings.Contains(text.Text, "e2e-insert-test") {
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Errorf("SELECT should contain 'e2e-insert-test', got: %v", selResult.Content)
+	}
+}
+
+// TestMCP_Query_UnknownDB verifies that querying a nonexistent database returns an error.
+func TestMCP_Query_UnknownDB(t *testing.T) {
+	env := setupE2E(t)
+	defer env.cleanup()
+
+	result, err := env.session.CallTool(context.Background(), &mcpsdk.CallToolParams{
+		Name: "query",
+		Arguments: map[string]any{
+			"database": "nonexistent_db_xyz",
+			"sql":      "SELECT 1",
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool query: %v", err)
+	}
+
+	if !result.IsError {
+		t.Fatal("query on nonexistent database should return error")
+	}
+}
+
 // setupTestTable creates a test table if it doesn't exist.
 func setupTestTable(t *testing.T, dbName string) {
 	t.Helper()
