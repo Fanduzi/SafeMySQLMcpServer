@@ -13,7 +13,7 @@ import (
 func NewMCPServer() *mcp.Server {
 	server := mcp.NewServer(&mcp.Implementation{
 		Name:    "safe-mysql-mcp",
-		Version: "1.0.0",
+		Version: "0.1.0",
 	}, nil)
 
 	return server

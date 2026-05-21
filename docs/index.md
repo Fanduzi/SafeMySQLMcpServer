@@ -34,6 +34,6 @@ SafeMySQLMcpServer is a secure MySQL MCP (Model Context Protocol) server that en
 
 ## Version
 
-Current version: **v1.0.0**
+Current version: **v0.1.0**
 
 See [CHANGELOG](../CHANGELOG.md) for version history.

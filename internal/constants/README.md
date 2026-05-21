@@ -12,7 +12,7 @@ Shared constants used across the application.
 ### Application Info
 ```go
 const (
-    Version  = "1.0.0"
+    Version  = "0.1.0"
     AppName  = "safe-mysql-mcp"
 )
 ```

@@ -21,7 +21,7 @@ info:
     - Automatic LIMIT clause enforcement
     - Query timeout enforcement
     - Comprehensive audit logging
-  version: 1.0.0
+  version: 0.1.0
   contact:
     name: API Support
   license:
