@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/fan/safe-mysql-mcp/internal/config"
 )
@@ -18,6 +19,7 @@ var limitRegex = regexp.MustCompile(`(?i)\bLIMIT\s+(\d+)`)
 
 // Rewriter rewrites SQL statements for safety
 type Rewriter struct {
+	mu    sync.RWMutex
 	rules *config.SecurityRules
 }
 
@@ -38,6 +40,9 @@ type RewriteResult struct {
 // Note: This implementation uses string operations with safety validation.
 // For production use, consider using AST-based rewriting for more robust handling.
 func (r *Rewriter) Rewrite(parsed *ParsedSQL) *RewriteResult {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
 	if parsed == nil || r.rules == nil {
 		return &RewriteResult{SQL: "", Changed: false}
 	}
@@ -102,5 +107,7 @@ func (r *Rewriter) capLimit(sql string, maxLimit int) string {
 
 // UpdateRules updates the security rules
 func (r *Rewriter) UpdateRules(rules *config.SecurityRules) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.rules = rules
 }

@@ -40,21 +40,19 @@ const (
 	SQLTypeOther       SQLType = "OTHER"
 )
 
-// Parser parses SQL statements
-type Parser struct {
-	parser *parser.Parser
-}
+// Parser parses SQL statements.
+// Each Parse call creates a fresh tidb parser to avoid concurrency issues
+// with the parser's internal global state (resetParams, scanner).
+type Parser struct{}
 
 // NewParser creates a new SQL parser
 func NewParser() *Parser {
-	return &Parser{
-		parser: parser.New(),
-	}
+	return &Parser{}
 }
 
 // Parse parses a SQL statement
 func (p *Parser) Parse(sql string) (*ParsedSQL, error) {
-	stmts, _, err := p.parser.Parse(sql, "", "")
+	stmts, _, err := parser.New().Parse(sql, "", "")
 	if err != nil {
 		return nil, err
 	}

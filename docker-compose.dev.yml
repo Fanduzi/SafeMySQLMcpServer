@@ -28,6 +28,8 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+    networks:
+      - safemysql-network
     environment:
       CONFIG_POLL_INTERVAL: ${CONFIG_POLL_INTERVAL:-30s}
 

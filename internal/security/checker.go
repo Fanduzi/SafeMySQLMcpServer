@@ -7,12 +7,14 @@ package security
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/fan/safe-mysql-mcp/internal/config"
 )
 
 // Checker performs security checks on SQL statements
 type Checker struct {
+	mu    sync.RWMutex
 	rules *config.SecurityRules
 }
 
@@ -32,6 +34,9 @@ type CheckResult struct {
 
 // Check checks if a SQL statement is allowed
 func (c *Checker) Check(parsed *ParsedSQL) *CheckResult {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
 	if parsed == nil {
 		return &CheckResult{
 			Allowed: false,
@@ -133,5 +138,7 @@ func (c *Checker) checkDDL(parsed *ParsedSQL) *CheckResult {
 
 // UpdateRules updates the security rules
 func (c *Checker) UpdateRules(rules *config.SecurityRules) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.rules = rules
 }

@@ -244,6 +244,11 @@ func (s *Server) Shutdown(ctx context.Context) error {
 func (s *Server) UpdateConfig(cfg *config.Config, security *config.SecurityConfig) {
 	s.cfg.Update(cfg, security)
 
+	// Update security rules in checker and rewriter
+	if security != nil {
+		s.handler.UpdateSecurityRules(&security.Security)
+	}
+
 	// Update connection pool
 	if err := s.pool.UpdateConfig(cfg.Clusters); err != nil {
 		log.Printf("Failed to update pool config: %v", err)

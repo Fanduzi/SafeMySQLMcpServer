@@ -158,6 +158,12 @@ func NewHandler(
 	}
 }
 
+// UpdateSecurityRules propagates new security rules to checker and rewriter.
+func (h *Handler) UpdateSecurityRules(rules *config.SecurityRules) {
+	h.checker.UpdateRules(rules)
+	h.rewriter.UpdateRules(rules)
+}
+
 // RegisterTools registers all MCP tools with the SDK server
 func RegisterTools(server *mcp.Server, h *Handler) {
 	// Query tool

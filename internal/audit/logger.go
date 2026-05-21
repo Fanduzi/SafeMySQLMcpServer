@@ -69,12 +69,12 @@ func NewLogger(cfg *config.AuditConfig) (*Logger, error) {
 
 // Log writes an audit entry to the log file
 func (l *Logger) Log(entry Entry) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
 	if !l.enabled {
 		return
 	}
-
-	l.mu.Lock()
-	defer l.mu.Unlock()
 
 	// Set timestamp if not set
 	if entry.Timestamp.IsZero() {
@@ -144,6 +144,9 @@ func (l *Logger) UpdateConfig(cfg *config.AuditConfig) error {
 
 // TruncateSQL truncates a SQL string to the maximum length
 func (l *Logger) TruncateSQL(sql string) string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
 	if l.maxSQLLen <= 0 || len(sql) <= l.maxSQLLen {
 		return sql
 	}
